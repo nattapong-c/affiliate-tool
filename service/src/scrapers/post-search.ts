@@ -51,12 +51,53 @@ export class PostSearchScraper {
         timeout: 60000,
       });
 
+      // Wait a bit for page to load
+      await page.waitForTimeout(3000);
+
+      // Check if we're on a login page or blocked
+      const currentUrl = page.url();
+      logger.info({ currentUrl }, 'Current page URL');
+
+      // Check for login page
+      const isLoginPage = currentUrl.includes('/login') || currentUrl.includes('/checkpoint');
+      if (isLoginPage) {
+        logger.error({ currentUrl }, 'Redirected to login page - session invalid');
+        throw new Error('Facebook session expired. Please log in again.');
+      }
+
+      // Check for "Not Found" page
+      const notFoundElement = await page.$('div[role="alert"]');
+      if (notFoundElement) {
+        const alertText = await notFoundElement.evaluate(el => el.textContent);
+        logger.error({ alertText }, 'Facebook returned error page');
+        throw new Error(`Facebook error: ${alertText}`);
+      }
+
+      // Take a screenshot for debugging
+      if (process.env.NODE_ENV === 'development') {
+        try {
+          await page.screenshot({ path: `tmp/search-${Date.now()}.png` });
+          logger.info('Screenshot saved for debugging');
+        } catch (error) {
+          logger.warn({ error }, 'Failed to save screenshot');
+        }
+      }
+
       // Wait for results to load
-      await page.waitForSelector('[data-pagelet="FeedUnit"], [role="article"]', {
+      const hasResults = await page.waitForSelector('[data-pagelet="FeedUnit"], [role="article"]', {
         timeout: 15000,
-      }).catch(() => {
-        logger.warn('No search results found');
-      });
+      }).catch(() => null);
+
+      if (!hasResults) {
+        logger.warn('No search results found - page may be blocked or empty');
+        // Return empty results instead of throwing
+        return {
+          query,
+          posts: [],
+          totalFound: 0,
+          searchedAt: new Date(),
+        };
+      }
 
       // Random delay to mimic human behavior
       await this.randomDelay();
@@ -65,20 +106,18 @@ export class PostSearchScraper {
       const postUrls = await this.extractPostUrls(page);
       logger.info({ postCount: postUrls.length }, 'Extracted post URLs');
 
-      // Filter by date
-      const filteredPosts = await this.filterByDate(page, postUrls, query.dateFrom);
-      logger.info({ filteredCount: filteredPosts.length }, 'Posts filtered by date');
+      // For now, return empty snippet since we're not scraping full content
+      const filteredPosts = postUrls.map(post => ({
+        ...post,
+        relevanceScore: 50, // Default relevance
+      }));
 
       // Limit results
       const limitedPosts = filteredPosts.slice(0, query.maxResults);
 
       const result: SearchResult = {
         query,
-        posts: limitedPosts.map(post => ({
-          url: post.url,
-          snippet: post.snippet,
-          relevanceScore: this.calculateRelevance(post.snippet, query.keywords),
-        })),
+        posts: limitedPosts,
         totalFound: limitedPosts.length,
         searchedAt: new Date(),
       };
@@ -90,7 +129,8 @@ export class PostSearchScraper {
 
       return result;
     } catch (error) {
-      logger.error({ sessionId, query, error }, 'Search failed');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logger.error({ sessionId, query, errorMessage }, 'Search failed');
       throw error;
     }
   }

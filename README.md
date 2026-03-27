@@ -1,16 +1,41 @@
-# Facebook Automation
+# Facebook Automation - Feed-Based Post Scraper
 
-AI-powered Facebook post monitoring and engagement tool for Shopee affiliate marketing.
+AI-powered Facebook feed monitoring tool that finds high-engagement posts from your timeline for Shopee affiliate marketing.
+
+## ⚠️ Breaking Changes (v2.0)
+
+**This project has been refactored to use feed-based scraping instead of keyword search.**
+
+### What Changed:
+- ❌ **REMOVED:** Keyword-based Facebook search scraping
+- ❌ **REMOVED:** Product selection page
+- ❌ **REMOVED:** Manual scrape triggers
+- ✅ **NEW:** Scrapes posts from your Facebook feed (homepage)
+- ✅ **NEW:** Automatic filtering by engagement metrics
+
+[Read more in AGENTS.md](./AGENTS.md)
+
+---
 
 ## 🎯 Overview
 
-This project automates the process of finding relevant Facebook posts and engaging with them using AI-generated comments that naturally incorporate Shopee affiliate products.
+This project automates the process of finding high-engagement Facebook posts from your feed and preparing them for AI-generated comments that naturally incorporate Shopee affiliate products.
+
+### How It Works:
+1. **Login to Facebook** - Scraper opens browser for authentication
+2. **Scrape Feed** - Extracts posts from your Facebook homepage timeline
+3. **Filter by Engagement** - Shows posts with high likes, comments, shares
+4. **Review & Engage** - Select posts for AI-generated comments (Phase 3)
+
+---
 
 ## 🤖 AI Agents
 
-1. **Keyword Strategist** - Generates high-relevance keywords from Shopee product data
-2. **Post Scout** - Finds high-engagement Facebook posts using generated keywords
-3. **Engagement Specialist** - Crafts personalized, non-spammy comments
+1. **Keyword Strategist** - Generates keywords from Shopee products (for reference)
+2. **Post Scout** - Scrapes high-engagement posts from your Facebook feed
+3. **Engagement Specialist** - Crafts personalized comments (Phase 3 - Coming Soon)
+
+---
 
 ## 🛠️ Tech Stack
 
@@ -20,7 +45,6 @@ This project automates the process of finding relevant Facebook posts and engagi
 - **Database**: MongoDB + Mongoose
 - **AI**: OpenAI GPT-4o
 - **Browser Automation**: Playwright (stealth mode)
-- **Scheduling**: elysia-cron
 - **Validation**: Zod
 - **Logging**: Pino
 
@@ -29,7 +53,9 @@ This project automates the process of finding relevant Facebook posts and engagi
 - **UI**: Shadcn UI + Tailwind CSS
 - **State**: React Query (TanStack Query)
 - **Icons**: Lucide React
-- **Validation**: Zod
+- **HTTP Client**: Axios
+
+---
 
 ## 📁 Project Structure
 
@@ -37,31 +63,30 @@ This project automates the process of finding relevant Facebook posts and engagi
 facebook-automation/
 ├── service/              # Backend (ElysiaJS)
 │   ├── src/
+│   │   ├── scrapers/     # Facebook feed scraper
 │   │   ├── services/     # Business logic
-│   │   ├── controllers/  # Request handlers
 │   │   ├── models/       # Mongoose schemas
 │   │   ├── routes/       # API routes
-│   │   ├── middleware/   # Express middleware
+│   │   ├── controllers/  # Request handlers
 │   │   ├── types/        # TypeScript types
 │   │   ├── utils/        # Utilities
-│   │   ├── cache/        # Cache implementation
 │   │   └── index.ts      # Entry point
-│   ├── package.json
-│   └── tsconfig.json
+│   ├── .env.example
+│   └── package.json
 ├── app/                  # Frontend (NextJS)
 │   ├── src/
+│   │   ├── app/          # NextJS pages
 │   │   ├── components/   # React components
 │   │   ├── hooks/        # Custom hooks
-│   │   ├── lib/          # Utilities & API client
-│   │   ├── types/        # TypeScript types
-│   │   └── app/          # NextJS pages
-│   ├── package.json
-│   └── tsconfig.json
+│   │   └── lib/          # API client
+│   ├── .env.example
+│   └── package.json
 ├── tasks/                # Task specifications
 ├── docs/                 # Documentation
-├── .env.example          # Environment template
 └── README.md
 ```
+
+---
 
 ## 🚀 Getting Started
 
@@ -69,7 +94,8 @@ facebook-automation/
 - Bun (latest)
 - Node.js 18+
 - MongoDB (local or Atlas)
-- OpenAI API key
+- OpenAI API key (for keyword generation)
+- Facebook account (for scraping)
 
 ### Installation
 
@@ -80,16 +106,11 @@ cd facebook-automation
 
 2. **Set up environment variables**
 ```bash
+# Copy environment files
 cp .env.example .env
-# Edit .env with your values (especially OPENAI_API_KEY)
-```
 
-**Using OpenRouter (optional):**
-```bash
-# In your .env file:
-OPENAI_BASE_URL=https://openrouter.ai/api/v1
-OPENAI_API_KEY=<your-openrouter-api-key>
-OPENAI_MODEL=google/gemma-2-9b-it:free
+# Edit .env with your credentials
+# IMPORTANT: Set FACEBOOK_SCRAPER_HEADLESS=false for first run
 ```
 
 3. **Install backend dependencies**
@@ -104,76 +125,183 @@ cd ../app
 bun install
 ```
 
-5. **Start MongoDB** (if running locally)
+5. **Install Playwright browser**
 ```bash
-mongod --dbpath /data/db
+cd service
+bunx playwright install chromium
 ```
 
-### Development
+### First-Time Facebook Authentication
 
-**Start backend:**
+**IMPORTANT:** The scraper requires a valid Facebook session.
+
+1. **Enable headful mode** in `.env`:
+```bash
+FACEBOOK_SCRAPER_HEADLESS=false
+```
+
+2. **Start the backend**:
 ```bash
 cd service
 bun run dev
 ```
-Backend runs on http://localhost:8080
 
-**Start frontend:**
-```bash
-cd app
-bun run dev
+3. **Open the dashboard**:
 ```
-Frontend runs on http://localhost:3000
-
-## 📋 Current Phase
-
-### Phase 1: Keyword Generator ✅
-- [x] Project setup
-- [x] Keyword Strategist service
-- [x] API endpoints
-- [x] Frontend UI
-- [ ] Integration testing
-
-### Phase 2: Post Scout (Planned)
-- Facebook post scraping
-- Engagement filtering
-- Post ranking
-
-### Phase 3: Engagement Specialist (Planned)
-- Comment generation
-- Auto-posting (with safety)
-- Response tracking
-
-## 🧪 Testing
-
-**Backend tests:**
-```bash
-cd service
-bun test
+http://localhost:3000/scout
 ```
 
-**Frontend tests:**
+4. **Click "Refresh Feed"** - A browser window will open
+
+5. **Log in to Facebook** in that browser window
+
+6. **Future scrapes** will use your saved session
+
+---
+
+## 📖 Usage
+
+### View Feed Posts
+
+1. Open http://localhost:3000/scout
+2. Click "Refresh Feed" to scrape new posts
+3. Filter by engagement metrics
+4. Review high-engagement posts
+
+### Generate Keywords (Optional)
+
+1. Open http://localhost:3000
+2. Enter Shopee product details
+3. Click "Generate Keywords"
+4. View generated keywords (for reference)
+
+---
+
+## 🔌 API Endpoints
+
+### Feed Posts
 ```bash
-cd app
-bun test
+# Get scraped posts
+GET http://localhost:8080/api/posts
+
+# Get high-engagement posts
+GET http://localhost:8080/api/posts/high-engagement
+
+# Get statistics
+GET http://localhost:8080/api/posts/statistics
+
+# Update post status
+PATCH http://localhost:8080/api/posts/:id/status
+
+# Delete post
+DELETE http://localhost:8080/api/posts/:id
 ```
 
-## 📖 Documentation
+### Keywords
+```bash
+# Generate keywords
+POST http://localhost:8080/api/keywords/generate
 
-- [AGENTS.md](./AGENTS.md) - AI agent definitions
-- [Tasks](./tasks/) - Implementation tasks
-- [Docs](./docs/) - Additional documentation
+# Get history
+GET http://localhost:8080/api/keywords/history
+
+# Delete history
+DELETE http://localhost:8080/api/keywords/:id
+```
+
+### Session
+```bash
+# Check Facebook session
+GET http://localhost:8080/api/products/check-session
+```
+
+---
 
 ## ⚠️ Important Notes
 
-1. **Facebook Automation**: Be careful with automation on Facebook. Always follow their Terms of Service.
-2. **Rate Limiting**: Built-in rate limiting protects against API abuse.
-3. **Session Management**: Use your own Facebook session cookies responsibly.
-4. **OpenAI Costs**: Monitor your OpenAI API usage to avoid unexpected charges.
+### Facebook Authentication
+- **Headful mode required** for first login
+- **Session expires** after Facebook logout
+- **Re-authenticate** by logging in again
 
-## 📄 License
+### Security
+⚠️ **Never commit Facebook cookies to git!**
 
-MIT
+⚠️ **Use a test account** for scraping, not your personal account
+
+⚠️ **Facebook's Terms of Service** may prohibit automated scraping - use at your own risk
+
+### Rate Limiting
+- Max 10 requests per minute (configured in `.env`)
+- Random delays between requests (2-5 seconds)
+- Use headful mode for better stealth
+
+---
+
+## 🧪 Testing
+
+### Backend Tests
+```bash
+cd service
+bun test
+```
+
+### Frontend Tests
+```bash
+cd app
+bun test
+```
+
+---
+
+## 📊 Phase Roadmap
+
+### ✅ Phase 1: Keyword Generator (COMPLETE)
+- Keyword generation from Shopee products
+- Multi-language support (EN/TH)
+- Keyword history and management
+
+### ✅ Phase 2: Post Scout (COMPLETE - REFACTORED)
+- ~~Keyword-based search~~ ❌ Deprecated
+- **Feed-based scraping** ✅ Current
+- Engagement filtering
+- Post dashboard
+
+### 🔄 Phase 3: Engagement Specialist (PLANNED)
+- Comment generation with AI
+- Sentiment analysis
+- Personalized responses
+- Auto-posting (with safety)
+
+---
+
+## 🐛 Troubleshooting
+
+### "Not found" when scraping
+**Cause:** No valid Facebook session
+**Solution:** Enable headful mode and log in to Facebook
+
+### "Session expired"
+**Cause:** Facebook cookies expired
+**Solution:** Re-authenticate by logging in again
+
+### No posts in dashboard
+**Cause:** Engagement threshold too high
+**Solution:** Lower minimum engagement filters
+
+### Build errors
+**Cause:** Missing dependencies
+**Solution:** Run `bun install` in both directories
+
+---
+
+## 📚 Documentation
+
+- **[AGENTS.md](./AGENTS.md)** - AI agents and architecture
+- **[FACEBOOK_SETUP.md](./service/FACEBOOK_SETUP.md)** - Facebook authentication guide
+- **[Tasks](./tasks/)** - Implementation specifications
+
+---
 
 ## 🤝 Contributing
 
@@ -184,4 +312,6 @@ MIT
 
 ---
 
-**Last Updated**: March 27, 2026
+**Last Updated:** March 27, 2026
+**Version:** 2.0 (Feed-Based Scraping)
+**License:** MIT

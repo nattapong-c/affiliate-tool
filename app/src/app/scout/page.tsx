@@ -8,12 +8,13 @@ import { usePosts } from '@/hooks/use-posts';
 import { PostFilterParams } from '@/lib/api';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Search, Package, ArrowLeft } from 'lucide-react';
+import { Search, ArrowLeft, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
+import { ScrapeFeedButton } from '@/components/scrape-feed-button';
 
 export default function ScoutPage() {
   const [filters, setFilters] = useState<PostFilterParams>({});
-  const { posts, isLoading, pagination, updateStatus, deletePost } = usePosts(filters);
+  const { posts, isLoading, pagination, updateStatus, deletePost, refetch } = usePosts(filters);
 
   return (
     <div className="min-h-screen bg-background">
@@ -30,19 +31,26 @@ export default function ScoutPage() {
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <Search className="h-6 w-6 text-primary" />
-                  <h1 className="text-3xl font-bold">🔍 Post Scout</h1>
+                  <h1 className="text-3xl font-bold">📰 Facebook Feed Posts</h1>
                 </div>
                 <p className="text-muted-foreground">
-                  Find and manage high-engagement Facebook posts for affiliate marketing
+                  High-engagement posts from your Facebook feed
                 </p>
               </div>
               
-              <Button variant="outline" asChild>
-                <Link href="/scout/products" className="flex items-center gap-2">
-                  <Package className="h-4 w-4" />
-                  Select Product
-                </Link>
-              </Button>
+              <div className="flex items-center gap-4">
+                <ScrapeFeedButton onScrapeComplete={() => refetch()} />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => refetch()}
+                  disabled={isLoading}
+                  className="gap-2"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Refresh
+                </Button>
+              </div>
             </div>
           </div>
         </div>

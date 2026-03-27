@@ -1,19 +1,19 @@
 import pino from 'pino';
 import { KeywordHistoryModel } from '../models/keyword-history';
 import { ScrapedPostModel } from '../models/scraped-post';
-import { PostSearchScraper } from '../scrapers/post-search';
+import { FeedScraper, createFeedScraper } from '../scrapers/feed-scraper';
 import { BrowserPool } from '../scrapers/browser-pool';
 import { ProductWithKeywords, ScrapeResult, TriggerScrapeRequest } from '../types/product-scraper';
 
 const logger = pino();
 
 export class ProductScraperService {
+  private feedScraper: FeedScraper;
   private browserPool: BrowserPool;
-  private postSearchScraper: PostSearchScraper;
 
   constructor() {
-    this.browserPool = new BrowserPool(3);
-    this.postSearchScraper = new PostSearchScraper(this.browserPool);
+    this.browserPool = new BrowserPool(1);
+    this.feedScraper = createFeedScraper(this.browserPool);
   }
 
   /**
@@ -142,14 +142,25 @@ export class ProductScraperService {
 
       // Get product keywords
       const keywordHistory = await KeywordHistoryModel.findById(id);
-      
+
       if (!keywordHistory) {
+        logger.error({ id }, 'Product not found');
         throw new Error('Product not found');
       }
 
       if (keywordHistory.keywords.length === 0) {
+        logger.error({ id }, 'Product has no keywords');
         throw new Error('Product has no keywords');
       }
+
+      logger.info(
+        { 
+          id, 
+          keywordCount: keywordHistory.keywords.length,
+          language: keywordHistory.language 
+        },
+        'Found product with keywords'
+      );
 
       // Prepare search query
       const dateTo = new Date();
@@ -157,6 +168,7 @@ export class ProductScraperService {
       dateFrom.setDate(dateFrom.getDate() - (request.dateRange?.daysBack || 30));
 
       // Search Facebook using keywords
+      logger.info({ sessionId, keywords: keywordHistory.keywords.slice(0, 5) }, 'Searching Facebook');
       const searchResult = await this.postSearchScraper.searchPosts(sessionId, {
         keywords: keywordHistory.keywords,
         dateFrom,
@@ -164,7 +176,7 @@ export class ProductScraperService {
         maxResults: request.maxResults || 20,
       });
 
-      // Save results to database
+      logger.info({ jobId, postsFound: searchResult.totalFound }, 'Search completed');
       for (const post of searchResult.posts) {
         try {
           await ScrapedPostModel.findOneAndUpdate(
@@ -204,7 +216,90 @@ export class ProductScraperService {
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      logger.error({ id, jobId, error }, 'Product scrape failed');
+      const errorStack = error instanceof Error ? error.stack : 'No stack';
+      
+      logger.error(
+        { 
+          id, 
+          jobId, 
+          errorMessage, 
+          errorStack,
+          errorType: error?.constructor?.name 
+        }, 
+        'Product scrape failed'
+      );
+
+      return {
+        success: false,
+        postsFound: 0,
+        searchQueries: 0,
+        duration: Date.now() - startTime,
+        jobId,
+      };
+    }
+  }
+
+  /**
+   * Scrape Facebook feed (for history tab scraping button)
+   */
+  async triggerScrapeFromKeywords(
+    id: string,
+    keywords: string[],
+    language: string,
+    request: TriggerScrapeRequest,
+    sessionId: string = 'default'
+  ): Promise<ScrapeResult> {
+    const startTime = Date.now();
+    const jobId = `feed-${id}-${Date.now()}`;
+
+    try {
+      logger.info({ id, jobId }, 'Starting feed scrape');
+
+      // Scrape Facebook feed
+      const feedOptions = {
+        scrollCount: 3,
+        minLikes: 0,
+        minComments: 0,
+        minShares: 0,
+        maxPosts: request.maxResults || 20,
+      };
+
+      logger.info({ sessionId, options: feedOptions }, 'Scraping Facebook feed');
+      const feedPosts = await this.feedScraper.scrapeFeed(sessionId, feedOptions);
+
+      logger.info({ jobId, postsFound: feedPosts.length }, 'Feed scrape completed');
+
+      // Save results to database
+      const savedCount = await this.feedScraper.savePosts(feedPosts);
+
+      const duration = Date.now() - startTime;
+
+      logger.info(
+        { jobId, postsFound: feedPosts.length, savedCount, duration },
+        'Feed scrape completed and saved'
+      );
+
+      return {
+        success: true,
+        postsFound: savedCount,
+        searchQueries: 1,
+        duration,
+        jobId,
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorStack = error instanceof Error ? error.stack : 'No stack';
+      
+      logger.error(
+        { 
+          id, 
+          jobId, 
+          errorMessage, 
+          errorStack,
+          errorType: error?.constructor?.name 
+        }, 
+        'Feed scrape failed'
+      );
 
       return {
         success: false,

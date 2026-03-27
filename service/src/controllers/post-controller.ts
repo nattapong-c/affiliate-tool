@@ -28,8 +28,15 @@ export class PostController {
     };
   }) {
     const filter: any = {};
+
+    // Default to showing 'new' and 'processed' posts if no status specified
+    if (request.query?.status) {
+      filter.status = request.query.status;
+    } else {
+      // Show all posts except 'skipped' by default
+      filter.status = ['new', 'processed', 'engaged'];
+    }
     
-    if (request.query?.status) filter.status = request.query.status;
     if (request.query?.minEngagement) filter.minEngagement = request.query.minEngagement;
     if (request.query?.minDensity) filter.minDensity = request.query.minDensity;
     if (request.query?.language) filter.language = request.query.language;
@@ -39,12 +46,18 @@ export class PostController {
     if (request.query?.limit) filter.limit = request.query.limit;
     if (request.query?.page) filter.page = request.query.page;
 
+    logger.info({ filter, query: request.query }, 'Getting posts with filter');
+
     const result = await this.postFilterService.getFilteredPosts(filter);
+
+    logger.info({ count: result.posts.length, total: result.pagination.total }, 'Posts retrieved');
 
     return {
       success: true,
-      data: result.posts,
-      pagination: result.pagination,
+      data: {
+        posts: result.posts,
+        pagination: result.pagination,
+      },
     };
   }
 

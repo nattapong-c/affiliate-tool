@@ -4,33 +4,14 @@ import { KeywordForm } from '@/components/keyword-form';
 import { KeywordResults } from '@/components/keyword-results';
 import { KeywordHistory } from '@/components/keyword-history';
 import { useKeywords } from '@/hooks/use-keywords';
-import { useProductScraper } from '@/hooks/use-product-scraper';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Sparkles, History, Search } from 'lucide-react';
 import Link from 'next/link';
-import { KeywordHistoryItem } from '@/lib/api';
-import { toast } from 'sonner';
 
 export default function KeywordsPage() {
   const { history, isLoading } = useKeywords();
-  const { scrapeProduct, isScraping } = useProductScraper();
   const latestGeneration = history[0];
-
-  const handleScrapeFromHistory = async (item: KeywordHistoryItem) => {
-    try {
-      // Use product scraper with product title as ID substitute
-      const result = await scrapeProduct({
-        id: item._id,
-        options: { maxResults: 20, daysBack: 30 }
-      });
-      
-      toast.success(`Scraping complete! Found ${result.postsFound} posts`);
-    } catch (error) {
-      toast.error('Failed to scrape posts');
-      console.error(error);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -81,7 +62,7 @@ export default function KeywordsPage() {
           </TabsContent>
 
           <TabsContent value="history" className="space-y-6">
-            <KeywordHistory onScrape={handleScrapeFromHistory} />
+            <KeywordHistory />
           </TabsContent>
         </Tabs>
       </div>

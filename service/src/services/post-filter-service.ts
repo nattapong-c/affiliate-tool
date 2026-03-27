@@ -23,9 +23,13 @@ export class PostFilterService {
   async getFilteredPosts(filter: PostFilter) {
     const query: any = {};
 
-    // Status filter
+    // Status filter - support both single status and array of statuses
     if (filter.status) {
-      query.status = filter.status;
+      if (Array.isArray(filter.status)) {
+        query.status = { $in: filter.status };
+      } else {
+        query.status = filter.status;
+      }
     }
 
     // Language filter

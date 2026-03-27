@@ -5,18 +5,16 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { KeywordHistoryItem } from '@/lib/api';
 import { KeywordPreview } from './keyword-preview';
-import { Search, Clock, Trash2, ChevronDown, ChevronUp, Sparkles, Loader2 } from 'lucide-react';
+import { Clock, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 
 interface HistoryItemProps {
   item: KeywordHistoryItem;
   onDelete: (id: string) => void;
-  onScrape: (item: KeywordHistoryItem) => void;
-  isScraping?: boolean;
 }
 
-export function HistoryItem({ item, onDelete, onScrape, isScraping }: HistoryItemProps) {
+export function HistoryItem({ item, onDelete }: HistoryItemProps) {
   const [showKeywords, setShowKeywords] = useState(false);
 
   return (
@@ -48,12 +46,10 @@ export function HistoryItem({ item, onDelete, onScrape, isScraping }: HistoryIte
                 <span>{formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}</span>
               </div>
               <div className="flex items-center gap-1">
-                <Sparkles className="h-3 w-3" />
-                <span>{item.keywords.length} keywords</span>
+                <span>✨ {item.keywords.length} keywords</span>
               </div>
               <div className="flex items-center gap-1">
-                <Search className="h-3 w-3" />
-                <span>{item.cacheHit ? 'Instant' : `${item.processingTimeMs}ms`}</span>
+                <span>⏱️ {item.cacheHit ? 'Instant' : `${item.processingTimeMs}ms`}</span>
               </div>
             </div>
           </div>
@@ -74,26 +70,6 @@ export function HistoryItem({ item, onDelete, onScrape, isScraping }: HistoryIte
                 <>
                   <ChevronDown className="h-4 w-4" />
                   Keywords
-                </>
-              )}
-            </Button>
-            
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => onScrape(item)}
-              disabled={isScraping}
-              className="gap-1"
-            >
-              {isScraping ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Scraping...
-                </>
-              ) : (
-                <>
-                  <Search className="h-4 w-4" />
-                  Scrape
                 </>
               )}
             </Button>

@@ -11,6 +11,9 @@ const logger = pino();
 const playwright = addExtra(chromium);
 playwright.use(stealth());
 
+// Import regular playwright for persistent context (doesn't support stealth but needed for sessions)
+import { chromium as regularChromium } from 'playwright';
+
 export class BrowserPool {
   private sessions: Map<string, BrowserSession> = new Map();
   private maxConcurrent: number;
@@ -36,15 +39,16 @@ export class BrowserPool {
     if (this.sessions.has(sessionId)) {
       const session = this.sessions.get(sessionId)!;
       
-      // Check if browser is still connected
-      if (session.browser.isConnected()) {
+      // For persistent context, check if context is still valid
+      if (session.context && !session.context.pages().includes(session.page)) {
+        // Page was closed, need to recreate
+        logger.warn({ sessionId }, 'Session page was closed, recreating');
+        await this.closeSession(sessionId);
+      } else {
+        // Session is still valid
         session.lastUsed = new Date();
         logger.info({ sessionId }, 'Reusing existing browser session');
         return session;
-      } else {
-        // Clean up disconnected session
-        logger.warn({ sessionId }, 'Session disconnected, cleaning up');
-        await this.closeSession(sessionId);
       }
     }
 
@@ -70,17 +74,17 @@ export class BrowserPool {
     config: ScraperConfig
   ): Promise<BrowserSession> {
     try {
-      const browser = await playwright.launch({
+      // Use persistent context for session persistence
+      // Note: Using regular chromium because playwright-extra doesn't support launchPersistentContext
+      const userDataDir = `/tmp/facebook-scraper-${sessionId}`;
+      
+      const context = await regularChromium.launchPersistentContext(userDataDir, {
         headless: config.headless,
         args: stealthConfig.launchArgs,
         timeout: config.timeout,
-      });
-
-      const viewport = getRandomViewport();
-      const context = await browser.newContext({
-        ...stealthConfig.contextOptions,
-        viewport,
+        viewport: getRandomViewport(),
         userAgent: config.userAgent || getRandomUserAgent(),
+        ...stealthConfig.contextOptions,
       });
 
       const page = await context.newPage();
@@ -102,13 +106,13 @@ export class BrowserPool {
       });
 
       logger.info(
-        { sessionId, viewport, userAgent: config.userAgent },
-        'Browser session created successfully'
+        { sessionId, userDataDir },
+        'Browser session created with persistent context'
       );
 
       return {
         id: sessionId,
-        browser,
+        browser: context,  // context acts as browser for persistent context
         context,
         page,
         createdAt: new Date(),
@@ -136,9 +140,7 @@ export class BrowserPool {
         if (session.context) {
           await session.context.close().catch(() => {});
         }
-        if (session.browser && session.browser.isConnected()) {
-          await session.browser.close().catch(() => {});
-        }
+        // For persistent context, browser is the context
 
         session.isActive = false;
         this.sessions.delete(sessionId);

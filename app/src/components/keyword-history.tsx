@@ -17,25 +17,12 @@ import { Search, Filter, X, FileText, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 
 interface KeywordHistoryProps {
-  onScrape?: (item: KeywordHistoryItem) => void;
 }
 
-export function KeywordHistory({ onScrape }: KeywordHistoryProps) {
+export function KeywordHistory() {
   const { history, isLoading, deleteHistory } = useKeywords();
   const [searchQuery, setSearchQuery] = useState('');
   const [languageFilter, setLanguageFilter] = useState<'all' | 'en' | 'th'>('all');
-  const [scrapingId, setScrapingId] = useState<string | null>(null);
-
-  const handleScrape = async (item: KeywordHistoryItem) => {
-    if (!onScrape) return;
-    
-    setScrapingId(item._id);
-    try {
-      await onScrape(item);
-    } finally {
-      setScrapingId(null);
-    }
-  };
 
   const handleDelete = async (id: string) => {
     await deleteHistory(id);
@@ -146,8 +133,6 @@ export function KeywordHistory({ onScrape }: KeywordHistoryProps) {
               key={item._id}
               item={item}
               onDelete={handleDelete}
-              onScrape={handleScrape}
-              isScraping={scrapingId === item._id}
             />
           ))}
         </div>

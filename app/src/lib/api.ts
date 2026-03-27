@@ -1,5 +1,6 @@
 import apiClient from './axios';
 import { handleApiError } from '@/utils/api-error';
+import { ScrapeFeedRequest, ScrapeFeedResponse } from '@/types/scrape-settings';
 
 export type LanguageCode = 'en' | 'th';
 
@@ -156,7 +157,8 @@ export const postApi = {
       if (filter.page) params.append('page', filter.page.toString());
 
       const response = await apiClient.get('/api/posts', { params });
-      return response.data;
+      // Backend returns {success: true, data: {posts, pagination}}
+      return response.data.data || { posts: [], pagination: {} };
     } catch (error) {
       handleApiError(error);
     }
@@ -264,22 +266,10 @@ export const productScraperApi = {
     }
   },
 
-  // Scrape from keyword history
-  scrapeFromHistory: async (
-    productTitle: string,
-    keywords: string[],
-    options?: { maxResults?: number; daysBack?: number }
-  ): Promise<ScrapeResult> => {
+  // Scrape Facebook feed
+  scrapeFeed: async (settings: ScrapeFeedRequest): Promise<ScrapeFeedResponse> => {
     try {
-      // Create a temporary product entry or use existing search endpoint
-      const body: any = {
-        keywords,
-        productTitle,
-      };
-      if (options?.maxResults) body.maxResults = options.maxResults;
-      if (options?.daysBack) body.dateRange = { daysBack: options.daysBack };
-
-      const response = await apiClient.post('/api/products/scrape-from-keywords', body, {
+      const response = await apiClient.post('/api/products/scrape-feed', settings, {
         params: { sessionId: 'web' },
       });
       return response.data.data;

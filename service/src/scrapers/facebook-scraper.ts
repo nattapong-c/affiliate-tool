@@ -121,7 +121,7 @@ export class FacebookScraper {
 
       // Extract author info
       const author = await page.evaluate(() => {
-        const authorElement = document.querySelector('[data-pagelet="PageHeader"] a');
+        const authorElement = document.querySelector('[data-pagelet="PageHeader"] a') as HTMLAnchorElement | null;
         return {
           name: authorElement?.textContent?.trim() || 'Unknown',
           profileUrl: authorElement?.href || '',
@@ -142,7 +142,7 @@ export class FacebookScraper {
       const images = await page.evaluate(() => {
         const imgElements = document.querySelectorAll('img[alt=""]');
         return Array.from(imgElements)
-          .map(img => img.getAttribute('src'))
+          .map(img => (img as HTMLImageElement).getAttribute('src'))
           .filter(Boolean) as string[];
       });
 
@@ -154,6 +154,7 @@ export class FacebookScraper {
         author,
         timestamp,
         engagement,
+        reactions: { like: engagement.likes, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 },
         engagementDensity: this.calculateEngagementDensity(engagement, timestamp),
         images,
         videos: [],

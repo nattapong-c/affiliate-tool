@@ -1,3 +1,4 @@
+// @ts-ignore
 import { describe, it, expect, beforeEach } from 'bun:test';
 import { formatTime, formatDate, getRelevanceColor, getRelevanceBadgeColor } from '../lib/utils';
 

@@ -1,8 +1,9 @@
 import pino from 'pino';
-import { ScrapedPostModel } from '../models/scraped-post';
+import { ScrapedPostModel as ScrapedPostModelInstance, ScrapedPostModel as ScrapedPostModelType } from '../models/scraped-post';
 import { engagementCalculator } from '../utils/engagement-calculator';
 
 const logger = pino();
+const ScrapedPostModel = ScrapedPostModelInstance as any as ScrapedPostModelType;
 
 export interface PostFilter {
   status?: 'new' | 'processed' | 'engaged' | 'skipped';

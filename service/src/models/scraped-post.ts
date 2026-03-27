@@ -15,6 +15,14 @@ export interface ScrapedPostDocument extends Document {
     shares: number;
     total: number;
   };
+  reactions: {
+    like: number;
+    love: number;
+    haha: number;
+    wow: number;
+    sad: number;
+    angry: number;
+  };
   engagementDensity: number;
   images: string[];
   videos: string[];
@@ -24,7 +32,16 @@ export interface ScrapedPostDocument extends Document {
   status: 'new' | 'processed' | 'engaged' | 'skipped';
 }
 
-const ScrapedPostSchema = new Schema<ScrapedPostDocument>({
+export interface ScrapedPostModel extends mongoose.Model<ScrapedPostDocument> {
+  findHighEngagement(minDensity?: number, limit?: number): Promise<ScrapedPostDocument[]>;
+  findRecent(daysBack?: number, limit?: number): Promise<ScrapedPostDocument[]>;
+  findByKeyword(keyword: string): Promise<ScrapedPostDocument[]>;
+  getEngagementStats(): Promise<any>;
+  findByStatus(status: string): Promise<ScrapedPostDocument[]>;
+  updateStatus(id: string, status: string): Promise<ScrapedPostDocument | null>;
+}
+
+const ScrapedPostSchema = new Schema<ScrapedPostDocument, ScrapedPostModel>({
   url: { 
     type: String, 
     required: true, 
@@ -54,6 +71,14 @@ const ScrapedPostSchema = new Schema<ScrapedPostDocument>({
     comments: { type: Number, default: 0 },
     shares: { type: Number, default: 0 },
     total: { type: Number, default: 0 }
+  },
+  reactions: {
+    like: { type: Number, default: 0 },
+    love: { type: Number, default: 0 },
+    haha: { type: Number, default: 0 },
+    wow: { type: Number, default: 0 },
+    sad: { type: Number, default: 0 },
+    angry: { type: Number, default: 0 }
   },
   engagementDensity: { 
     type: Number, 
@@ -188,7 +213,7 @@ ScrapedPostSchema.methods.calculateDensity = function() {
   return this.engagementDensity;
 };
 
-export const ScrapedPostModel = mongoose.model<ScrapedPostDocument>(
+export const ScrapedPostModel = mongoose.model<ScrapedPostDocument, ScrapedPostModel>(
   'ScrapedPost',
   ScrapedPostSchema
 );

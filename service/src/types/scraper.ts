@@ -33,6 +33,14 @@ export interface ScrapedPost {
     shares: number;
     total: number;
   };
+  reactions: {
+    like: number;
+    love: number;
+    haha: number;
+    wow: number;
+    sad: number;
+    angry: number;
+  };
   engagementDensity: number;
   images: string[];
   videos: string[];

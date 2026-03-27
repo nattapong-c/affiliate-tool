@@ -72,7 +72,7 @@ export default function ScoutPage() {
             <PostTable
               posts={posts}
               isLoading={isLoading}
-              onUpdateStatus={updateStatus}
+              onUpdateStatus={(id, status) => updateStatus({ id, status })}
               onDelete={deletePost}
             />
             
@@ -99,7 +99,7 @@ export default function ScoutPage() {
             <PostTable
               posts={posts}
               isLoading={isLoading}
-              onUpdateStatus={updateStatus}
+              onUpdateStatus={(id, status) => updateStatus({ id, status })}
               onDelete={deletePost}
             />
           </TabsContent>
@@ -112,7 +112,7 @@ export default function ScoutPage() {
             <PostTable
               posts={posts}
               isLoading={isLoading}
-              onUpdateStatus={updateStatus}
+              onUpdateStatus={(id, status) => updateStatus({ id, status })}
               onDelete={deletePost}
             />
           </TabsContent>
@@ -125,7 +125,7 @@ export default function ScoutPage() {
             <PostTable
               posts={posts}
               isLoading={isLoading}
-              onUpdateStatus={updateStatus}
+              onUpdateStatus={(id, status) => updateStatus({ id, status })}
               onDelete={deletePost}
             />
           </TabsContent>

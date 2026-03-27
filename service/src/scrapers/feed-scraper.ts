@@ -23,6 +23,14 @@ export interface FeedPost {
     shares: number;
     total: number;
   };
+  reactions: {
+    like: number;
+    love: number;
+    haha: number;
+    wow: number;
+    sad: number;
+    angry: number;
+  };
   scrapedAt: Date;
 }
 
@@ -149,7 +157,7 @@ export class FeedScraper {
       if (postElements.length === 0) {
         // Try to find divs that contain typical post structure
         const allDivs = document.querySelectorAll('div');
-        postElements = Array.from(allDivs).filter(div => {
+        postElements = (Array.from(allDivs) as HTMLElement[]).filter(div => {
           const text = div.textContent || '';
           // Look for divs with substantial content and engagement buttons
           return text.length > 100 && 
@@ -174,18 +182,21 @@ export class FeedScraper {
           // Skip empty or very short posts
           if (!content || content.length < 10) return;
 
-          // Extract author
+          // Extract author - improved strategy
           let author = 'Unknown';
-          const authorEl = el.querySelector('[data-pagelet="PageHeader"] a') ||
+          const authorEl = (el.querySelector('[data-pagelet="PostHeader"] h2 a') ||
+                          el.querySelector('[data-pagelet="PostHeader"] h3 a') ||
+                          el.querySelector('h2 span a[role="link"]') ||
+                          el.querySelector('[data-pagelet="PageHeader"] a') ||
                           el.querySelector('[data-pagelet="PostHeader"] a') ||
                           el.querySelector('a[href*="/profile"]') ||
-                          el.querySelector('strong');
+                          el.querySelector('strong')) as HTMLAnchorElement | null;
           author = authorEl?.textContent?.trim() || 'Unknown';
 
           // Extract timestamp
-          const timeEl = el.querySelector('abbr[data-utime]') ||
+          const timeEl = (el.querySelector('abbr[data-utime]') ||
                         el.querySelector('time') ||
-                        el.querySelector('[data-tooltip-content="true"]');
+                        el.querySelector('[data-tooltip-content="true"]')) as HTMLElement | null;
           const timestamp = timeEl?.getAttribute('data-utime') || 
                            timeEl?.getAttribute('datetime');
 
@@ -218,12 +229,13 @@ export class FeedScraper {
           };
 
           // 1. Extract Likes/Reactions
-          // Look for the engagement row (usually above the action buttons)
-          const reactionEl = el.querySelector('[aria-label*="reacted" i]') || 
+          const reactionEl = (el.querySelector('[aria-label*="reacted" i]') || 
                             el.querySelector('[aria-label*="ถูกใจ" i]') ||
-                            el.querySelector('[aria-label*="See who reacted" i]');
+                            el.querySelector('[aria-label*="See who reacted" i]')) as HTMLElement | null;
           
           let likes = 0;
+          const reactions = { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 };
+          
           if (reactionEl) {
             const label = reactionEl.getAttribute('aria-label') || '';
             // Handle "Liked by X and 1.2K others"
@@ -234,41 +246,72 @@ export class FeedScraper {
             } else {
               likes = parseEngagementCount(label);
             }
+
+            // Extract breakdown from aria-label if possible (Facebook sometimes includes it)
+            // Example: "See who reacted to this: 1.2K (Like: 1K, Love: 200)"
+            const breakdownMatch = label.match(/\((.*?)\)/);
+            if (breakdownMatch) {
+              const items = breakdownMatch[1].split(',');
+              items.forEach((item: string) => {
+                const parts = item.split(':');
+                if (parts.length === 2) {
+                  const type = parts[0].trim().toLowerCase();
+                  const count = parseEngagementCount(parts[1]);
+                  if (type.includes('like') || type.includes('ถูกใจ')) reactions.like = count;
+                  else if (type.includes('love') || type.includes('รัก')) reactions.love = count;
+                  else if (type.includes('haha') || type.includes('ฮ่าฮ่า')) reactions.haha = count;
+                  else if (type.includes('wow') || type.includes('ว้าว')) reactions.wow = count;
+                  else if (type.includes('sad') || type.includes('เศร้า')) reactions.sad = count;
+                  else if (type.includes('angry') || type.includes('โกรธ')) reactions.angry = count;
+                }
+              });
+            } else {
+              // Fallback: If no breakdown, set all likes to the 'like' type
+              reactions.like = likes;
+            }
           }
 
           // 2. Extract Comments
-          // Look for comment count next to the button or in the aria-label
-          const commentEl = Array.from(el.querySelectorAll('[aria-label*="Comment" i], [aria-label*="ความคิดเห็น" i]')).pop();
+          // Look for comment count in the summary row or buttons
+          const commentEl = (el.querySelector('[aria-label*="Comment" i]:not([role="button"])') || 
+                            el.querySelector('[aria-label*="ความคิดเห็น" i]:not([role="button"])') ||
+                            Array.from(el.querySelectorAll('span, a')).find(node => 
+                              /^\d+.*(comment|ความคิดเห็น)/i.test(node.textContent || '')
+                            ) ||
+                            Array.from(el.querySelectorAll('[aria-label*="Comment" i], [aria-label*="ความคิดเห็น" i]')).pop()) as HTMLElement | undefined;
+          
           let comments = 0;
           if (commentEl) {
             const label = commentEl.getAttribute('aria-label') || '';
-            comments = parseEngagementCount(label);
-            // Fallback to text content if label doesn't have the number
-            if (comments === 0) {
-              comments = parseEngagementCount(commentEl.textContent);
-            }
+            const text = commentEl.textContent || '';
+            comments = parseEngagementCount(label) || parseEngagementCount(text);
           }
 
           // 3. Extract Shares
           // Look for share count
-          const shareEl = Array.from(el.querySelectorAll('[aria-label*="Share" i], [aria-label*="แชร์" i]')).pop();
+          const shareEl = (el.querySelector('[aria-label*="Share" i]:not([role="button"])') || 
+                          el.querySelector('[aria-label*="แชร์" i]:not([role="button"])') ||
+                          Array.from(el.querySelectorAll('span, a')).find(node => 
+                            /^\d+.*(share|แชร์)/i.test(node.textContent || '')
+                          ) ||
+                          Array.from(el.querySelectorAll('[aria-label*="Share" i], [aria-label*="แชร์" i]')).pop()) as HTMLElement | undefined;
+          
           let shares = 0;
           if (shareEl) {
             const label = shareEl.getAttribute('aria-label') || '';
-            shares = parseEngagementCount(label);
-            if (shares === 0) {
-              shares = parseEngagementCount(shareEl.textContent);
-            }
+            const text = shareEl.textContent || '';
+            shares = parseEngagementCount(label) || parseEngagementCount(text);
           }
 
           // Extract post URL
-          const linkEl = el.querySelector('a[href*="/posts/"]') ||
+          const linkEl = (el.querySelector('a[href*="/posts/"]') ||
                         el.querySelector('a[href*="/photos/"]') ||
-                        el.querySelector('a[href*="fbid="]');
+                        el.querySelector('a[href*="/permalink.php"]') ||
+                        el.querySelector('a[href*="fbid="]')) as HTMLAnchorElement | null;
           const url = linkEl?.href || '';
 
-          // Only add if we have meaningful content
-          if (content && content.length > 20) {
+          // Only add if we have meaningful content and a valid URL
+          if (content && content.length > 20 && url) {
             posts.push({
               url,
               content,
@@ -280,6 +323,7 @@ export class FeedScraper {
                 shares,
                 total: likes + comments + shares,
               },
+              reactions,
               scrapedAt: new Date(),
             });
           }
@@ -314,6 +358,10 @@ export class FeedScraper {
     let savedCount = 0;
 
     for (const post of posts) {
+      if (!post.url) {
+        logger.warn({ author: post.author }, 'Skipping post with empty URL');
+        continue;
+      }
       try {
         await ScrapedPostModel.findOneAndUpdate(
           { url: post.url },
@@ -324,6 +372,7 @@ export class FeedScraper {
             author: { name: post.author, profileUrl: '' },
             timestamp: post.timestamp,
             engagement: post.engagement,
+            reactions: post.reactions,
             engagementDensity: post.engagement.total,
             images: [],
             videos: [],

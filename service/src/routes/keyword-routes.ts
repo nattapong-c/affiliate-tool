@@ -9,7 +9,12 @@ export function createKeywordRoutes(strategist: KeywordStrategist) {
     // Generate keywords
     .post(
       '/generate',
-      ({ body }) => controller.generateKeywords({ body }),
+      ({ body }) => controller.generateKeywords({ 
+        body: {
+          ...body,
+          language: body.language || 'en'
+        } 
+      }),
       {
         body: t.Object({
           productTitle: t.String({ minLength: 1, maxLength: 200 }),

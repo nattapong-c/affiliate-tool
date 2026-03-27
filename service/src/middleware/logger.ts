@@ -16,13 +16,13 @@ export function loggerMiddleware() {
         'Request received'
       );
     })
-    .onAfterHandle(({ request, code }) => {
+    .onAfterHandle(({ request, set }) => {
       const url = new URL(request.url);
       logger.info(
         {
           method: request.method,
           path: url.pathname,
-          status: code
+          status: set.status
         },
         'Response sent'
       );

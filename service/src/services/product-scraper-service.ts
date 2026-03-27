@@ -3,17 +3,23 @@ import { KeywordHistoryModel } from '../models/keyword-history';
 import { ScrapedPostModel } from '../models/scraped-post';
 import { FeedScraper, createFeedScraper } from '../scrapers/feed-scraper';
 import { BrowserPool } from '../scrapers/browser-pool';
+import { PostSearchScraper, createPostSearchScraper } from '../scrapers/post-search';
+import { PostDetailScraper, createPostDetailScraper } from '../scrapers/post-detail-scraper';
 import { ProductWithKeywords, ScrapeResult, TriggerScrapeRequest } from '../types/product-scraper';
 
 const logger = pino();
 
 export class ProductScraperService {
   private feedScraper: FeedScraper;
+  private postSearchScraper: PostSearchScraper;
+  private postDetailScraper: PostDetailScraper;
   private browserPool: BrowserPool;
 
   constructor() {
     this.browserPool = new BrowserPool(1);
     this.feedScraper = createFeedScraper(this.browserPool);
+    this.postSearchScraper = createPostSearchScraper(this.browserPool);
+    this.postDetailScraper = createPostDetailScraper(this.browserPool);
   }
 
   /**
@@ -170,7 +176,7 @@ export class ProductScraperService {
       // Search Facebook using keywords
       logger.info({ sessionId, keywords: keywordHistory.keywords.slice(0, 5) }, 'Searching Facebook');
       const searchResult = await this.postSearchScraper.searchPosts(sessionId, {
-        keywords: keywordHistory.keywords,
+        keywords: keywordHistory.keywords.map(k => typeof k === 'string' ? k : (k as any).text),
         dateFrom,
         dateTo,
         maxResults: request.maxResults || 20,
@@ -187,6 +193,7 @@ export class ProductScraperService {
               content: post.snippet,
               timestamp: new Date(),
               engagement: { likes: 0, comments: 0, shares: 0, total: 0 },
+              reactions: { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 },
               engagementDensity: post.relevanceScore,
               keywords: keywordHistory.keywords,
               language: keywordHistory.language,

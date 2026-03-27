@@ -1,9 +1,10 @@
 import pino from 'pino';
 import { PostSearchScraper } from '../scrapers/post-search';
-import { SearchHistoryModel } from '../models/search-history';
+import { SearchHistoryModel as SearchHistoryModelInstance, SearchHistoryModel as SearchHistoryModelType } from '../models/search-history';
 import { SearchResult, SearchQuery } from '../types/scraper';
 
 const logger = pino();
+const SearchHistoryModel = SearchHistoryModelInstance as any as SearchHistoryModelType;
 
 export class SearchService {
   private scraper: PostSearchScraper;

@@ -18,7 +18,13 @@ export interface SearchHistoryDocument extends Document {
   searchedAt: Date;
 }
 
-const SearchHistorySchema = new Schema<SearchHistoryDocument>({
+export interface SearchHistoryModel extends mongoose.Model<SearchHistoryDocument> {
+  findRecent(userId?: string, limit?: number): Promise<SearchHistoryDocument[]>;
+  findByKeyword(keyword: string): Promise<SearchHistoryDocument[]>;
+  getStatistics(userId?: string): Promise<any>;
+}
+
+const SearchHistorySchema = new Schema<SearchHistoryDocument, SearchHistoryModel>({
   userId: { type: String, index: true },
   keywords: { 
     type: [String], 

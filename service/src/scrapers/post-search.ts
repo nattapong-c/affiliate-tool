@@ -68,7 +68,7 @@ export class PostSearchScraper {
       // Check for "Not Found" page
       const notFoundElement = await page.$('div[role="alert"]');
       if (notFoundElement) {
-        const alertText = await notFoundElement.evaluate(el => el.textContent);
+        const alertText = await notFoundElement.evaluate((el: HTMLElement) => el.textContent);
         logger.error({ alertText }, 'Facebook returned error page');
         throw new Error(`Facebook error: ${alertText}`);
       }
@@ -146,7 +146,7 @@ export class PostSearchScraper {
 
         postElements.forEach((element) => {
           // Find post link
-          const link = element.querySelector('a[href*="/posts/"], a[href*="/photos/"]');
+          const link = element.querySelector('a[href*="/posts/"], a[href*="/photos/"]') as HTMLAnchorElement | null;
           if (link && link.href) {
             // Extract text snippet
             const textElement = element.querySelector('[data-pagelet="PostText"]');

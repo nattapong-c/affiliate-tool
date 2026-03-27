@@ -21,6 +21,14 @@ export interface PostDetail {
     shares: number;
     total: number;
   };
+  reactions: {
+    like: number;
+    love: number;
+    haha: number;
+    wow: number;
+    sad: number;
+    angry: number;
+  };
   images: string[];
   videos: string[];
 }
@@ -65,7 +73,7 @@ export class PostDetailScraper {
       const timestamp = await this.extractTimestamp(page);
 
       // Extract engagement metrics
-      const engagement = await this.extractEngagementMetrics(page);
+      const engagementResult = await this.extractEngagementMetrics(page);
 
       // Extract images
       const images = await this.extractImages(page);
@@ -82,13 +90,19 @@ export class PostDetailScraper {
         content: content || 'No content',
         author,
         timestamp,
-        engagement,
+        engagement: {
+          likes: engagementResult.likes,
+          comments: engagementResult.comments,
+          shares: engagementResult.shares,
+          total: engagementResult.total,
+        },
+        reactions: engagementResult.reactions,
         images,
         videos,
       };
 
       logger.info(
-        { postId: postDetail.postId, engagement },
+        { postId: postDetail.postId, engagement: postDetail.engagement },
         'Post detail scraped successfully'
       );
 
@@ -182,6 +196,14 @@ export class PostDetailScraper {
     comments: number;
     shares: number;
     total: number;
+    reactions: {
+      like: number;
+      love: number;
+      haha: number;
+      wow: number;
+      sad: number;
+      angry: number;
+    };
   }> {
     try {
       const metrics = await page.evaluate(() => {
@@ -217,6 +239,8 @@ export class PostDetailScraper {
                           document.querySelector('[aria-label*="See who reacted" i]');
         
         let likes = 0;
+        const reactions = { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 };
+        
         if (reactionEl) {
           const label = reactionEl.getAttribute('aria-label') || '';
           const othersMatch = label.match(/and ([\d,.]+[KMBพันล้าน]*) others/i) || 
@@ -226,28 +250,57 @@ export class PostDetailScraper {
           } else {
             likes = parseEngagementCount(label);
           }
+
+          // Extract breakdown from aria-label
+          const breakdownMatch = label.match(/\((.*?)\)/);
+          if (breakdownMatch) {
+            const items = breakdownMatch[1].split(',');
+            items.forEach(item => {
+              const parts = item.split(':');
+              if (parts.length === 2) {
+                const type = parts[0].trim().toLowerCase();
+                const count = parseEngagementCount(parts[1]);
+                if (type.includes('like') || type.includes('ถูกใจ')) reactions.like = count;
+                else if (type.includes('love') || type.includes('รัก')) reactions.love = count;
+                else if (type.includes('haha') || type.includes('ฮ่าฮ่า')) reactions.haha = count;
+                else if (type.includes('wow') || type.includes('ว้าว')) reactions.wow = count;
+                else if (type.includes('sad') || type.includes('เศร้า')) reactions.sad = count;
+                else if (type.includes('angry') || type.includes('โกรธ')) reactions.angry = count;
+              }
+            });
+          } else {
+            reactions.like = likes;
+          }
         }
 
         // 2. Extract Comments
-        const commentEl = Array.from(document.querySelectorAll('[aria-label*="Comment" i], [aria-label*="ความคิดเห็น" i]')).pop();
+        const commentEl = (document.querySelector('[aria-label*="Comment" i]:not([role="button"])') || 
+                          document.querySelector('[aria-label*="ความคิดเห็น" i]:not([role="button"])') ||
+                          Array.from(document.querySelectorAll('span, a')).find(node => 
+                            /^\d+.*(comment|ความคิดเห็น)/i.test(node.textContent || '')
+                          ) ||
+                          Array.from(document.querySelectorAll('[aria-label*="Comment" i], [aria-label*="ความคิดเห็น" i]')).pop()) as HTMLElement | undefined;
+        
         let comments = 0;
         if (commentEl) {
           const label = commentEl.getAttribute('aria-label') || '';
-          comments = parseEngagementCount(label);
-          if (comments === 0) {
-            comments = parseEngagementCount(commentEl.textContent);
-          }
+          const text = commentEl.textContent || '';
+          comments = parseEngagementCount(label) || parseEngagementCount(text);
         }
 
         // 3. Extract Shares
-        const shareEl = Array.from(document.querySelectorAll('[aria-label*="Share" i], [aria-label*="แชร์" i]')).pop();
+        const shareEl = (document.querySelector('[aria-label*="Share" i]:not([role="button"])') || 
+                        document.querySelector('[aria-label*="แชร์" i]:not([role="button"])') ||
+                        Array.from(document.querySelectorAll('span, a')).find(node => 
+                          /^\d+.*(share|แชร์)/i.test(node.textContent || '')
+                        ) ||
+                        Array.from(document.querySelectorAll('[aria-label*="Share" i], [aria-label*="แชร์" i]')).pop()) as HTMLElement | undefined;
+        
         let shares = 0;
         if (shareEl) {
           const label = shareEl.getAttribute('aria-label') || '';
-          shares = parseEngagementCount(label);
-          if (shares === 0) {
-            shares = parseEngagementCount(shareEl.textContent);
-          }
+          const text = shareEl.textContent || '';
+          shares = parseEngagementCount(label) || parseEngagementCount(text);
         }
 
         return {
@@ -255,13 +308,20 @@ export class PostDetailScraper {
           comments,
           shares,
           total: likes + comments + shares,
+          reactions
         };
       });
 
       return metrics;
     } catch (error) {
       logger.error({ error }, 'Failed to extract engagement metrics');
-      return { likes: 0, comments: 0, shares: 0, total: 0 };
+      return { 
+        likes: 0, 
+        comments: 0, 
+        shares: 0, 
+        total: 0,
+        reactions: { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 }
+      };
     }
   }
 
@@ -326,6 +386,7 @@ export class PostDetailScraper {
         await ScrapedPostModel.findByIdAndUpdate(existing._id, {
           content: postDetail.content,
           engagement: postDetail.engagement,
+          reactions: postDetail.reactions,
           engagementDensity: engagementAnalysis.density,
           keywords,
           scrapedAt: new Date(),
@@ -341,6 +402,7 @@ export class PostDetailScraper {
           author: postDetail.author,
           timestamp: postDetail.timestamp,
           engagement: postDetail.engagement,
+          reactions: postDetail.reactions,
           engagementDensity: engagementAnalysis.density,
           images: postDetail.images,
           videos: postDetail.videos,

@@ -94,7 +94,18 @@ export function PostTable({ posts, isLoading, onUpdateStatus, onDelete }: PostTa
             </TableCell>
             <TableCell>
               <div className="flex gap-2">
-                <Badge variant="secondary" className="gap-1">
+                <Badge 
+                  variant="secondary" 
+                  className="gap-1 cursor-help"
+                  title={[
+                    post.reactions?.love > 0 && `❤️ ${post.reactions.love}`,
+                    post.reactions?.haha > 0 && `😂 ${post.reactions.haha}`,
+                    post.reactions?.wow > 0 && `😮 ${post.reactions.wow}`,
+                    post.reactions?.sad > 0 && `😢 ${post.reactions.sad}`,
+                    post.reactions?.angry > 0 && `😡 ${post.reactions.angry}`,
+                    post.reactions?.like > 0 && `👍 ${post.reactions.like}`,
+                  ].filter(Boolean).join(', ') || `Likes: ${post.engagement.likes}`}
+                >
                   <Heart className="h-3 w-3" />
                   {post.engagement.likes}
                 </Badge>

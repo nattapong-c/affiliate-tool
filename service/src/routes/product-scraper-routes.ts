@@ -101,7 +101,7 @@ export function createProductScraperRoutes() {
     .get(
       '/:id/scrape-history',
       ({ params: { id }, query }) =>
-        service.getScrapeHistory(id, parseInt(query.limit || '10')),
+        service.getScrapeHistory(id, Number(query.limit || 10)),
       {
         query: t.Object({
           limit: t.Optional(t.Number({ minimum: 1, maximum: 100 })),

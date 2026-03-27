@@ -185,38 +185,79 @@ export class PostDetailScraper {
   }> {
     try {
       const metrics = await page.evaluate(() => {
-        const parseCount = (text?: string): number => {
+        const parseEngagementCount = (text: string | null | undefined): number => {
           if (!text) return 0;
+          const cleanText = text.trim();
+          if (!cleanText) return 0;
           
-          // Handle abbreviated numbers (1K, 1M, etc.)
-          const match = text.match(/([\d,.]+[KMB]?)$/i);
+          const match = cleanText.match(/([\d,.]+\s?[KMBพันล้าน]*)/i);
           if (!match) return 0;
           
-          const numStr = match[1].toLowerCase();
-          const multiplier = 
-            numStr.includes('k') ? 1000 : 
-            numStr.includes('m') ? 1000000 : 
-            numStr.includes('b') ? 1000000000 : 1;
+          let valStr = match[1].replace(/,/g, '').toUpperCase().replace(/\s+/g, '');
+          let multiplier = 1;
           
-          const num = parseFloat(numStr.replace(/[kmb]/i, '').replace(/,/g, ''));
-          return Math.round(num * multiplier);
+          if (valStr.includes('K') || valStr.includes('พัน')) {
+            multiplier = 1000;
+            valStr = valStr.replace(/[Kพัน]/g, '');
+          } else if (valStr.includes('M') || valStr.includes('ล้าน')) {
+            multiplier = 1000000;
+            valStr = valStr.replace(/[Mล้าน]/g, '');
+          } else if (valStr.includes('B')) {
+            multiplier = 1000000000;
+            valStr = valStr.replace(/[B]/g, '');
+          }
+          
+          const base = parseFloat(valStr);
+          return isNaN(base) ? 0 : Math.round(base * multiplier);
         };
 
-        // Find engagement elements with aria-labels
-        const likeElements = document.querySelectorAll('[aria-label*="Like"]');
-        const commentElements = document.querySelectorAll('[aria-label*="Comment"]');
-        const shareElements = document.querySelectorAll('[aria-label*="Share"]');
+        // 1. Extract Likes/Reactions
+        const reactionEl = document.querySelector('[aria-label*="reacted" i]') || 
+                          document.querySelector('[aria-label*="ถูกใจ" i]') ||
+                          document.querySelector('[aria-label*="See who reacted" i]');
+        
+        let likes = 0;
+        if (reactionEl) {
+          const label = reactionEl.getAttribute('aria-label') || '';
+          const othersMatch = label.match(/and ([\d,.]+[KMBพันล้าน]*) others/i) || 
+                             label.match(/และคนอื่นๆ อีก ([\d,.]+[KMBพันล้าน]*)/i);
+          if (othersMatch) {
+            likes = parseEngagementCount(othersMatch[1]) + 1;
+          } else {
+            likes = parseEngagementCount(label);
+          }
+        }
+
+        // 2. Extract Comments
+        const commentEl = Array.from(document.querySelectorAll('[aria-label*="Comment" i], [aria-label*="ความคิดเห็น" i]')).pop();
+        let comments = 0;
+        if (commentEl) {
+          const label = commentEl.getAttribute('aria-label') || '';
+          comments = parseEngagementCount(label);
+          if (comments === 0) {
+            comments = parseEngagementCount(commentEl.textContent);
+          }
+        }
+
+        // 3. Extract Shares
+        const shareEl = Array.from(document.querySelectorAll('[aria-label*="Share" i], [aria-label*="แชร์" i]')).pop();
+        let shares = 0;
+        if (shareEl) {
+          const label = shareEl.getAttribute('aria-label') || '';
+          shares = parseEngagementCount(label);
+          if (shares === 0) {
+            shares = parseEngagementCount(shareEl.textContent);
+          }
+        }
 
         return {
-          likes: parseCount(likeElements[0]?.textContent),
-          comments: parseCount(commentElements[0]?.textContent),
-          shares: parseCount(shareElements[0]?.textContent),
-          total: 0,
+          likes,
+          comments,
+          shares,
+          total: likes + comments + shares,
         };
       });
 
-      metrics.total = metrics.likes + metrics.comments + metrics.shares;
-      
       return metrics;
     } catch (error) {
       logger.error({ error }, 'Failed to extract engagement metrics');

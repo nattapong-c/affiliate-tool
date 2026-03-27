@@ -189,25 +189,77 @@ export class FeedScraper {
           const timestamp = timeEl?.getAttribute('data-utime') || 
                            timeEl?.getAttribute('datetime');
 
-          // Extract engagement metrics
-          const likeEl = Array.from(el.querySelectorAll('[aria-label*="Like" i]')).pop() ||
-                        Array.from(el.querySelectorAll('[aria-label*="reacted"]')).pop();
-          const commentEl = Array.from(el.querySelectorAll('[aria-label*="Comment" i]')).pop();
-          const shareEl = Array.from(el.querySelectorAll('[aria-label*="Share" i]')).pop();
-
-          const parseCount = (text?: string | null): number => {
+          // Extract engagement metrics - revised robust strategy
+          const parseEngagementCount = (text: string | null | undefined): number => {
             if (!text) return 0;
-            const match = text.match(/([\d,.]+[KMB]?)/i);
+            const cleanText = text.trim();
+            if (!cleanText) return 0;
+            
+            // Extract numeric part and suffix (supports K, M, B, พัน, ล้าน)
+            const match = cleanText.match(/([\d,.]+\s?[KMBพันล้าน]*)/i);
             if (!match) return 0;
-            const numStr = match[1].toLowerCase();
-            const multiplier = numStr.includes('k') ? 1000 : numStr.includes('m') ? 1000000 : numStr.includes('b') ? 1000000000 : 1;
-            const num = parseFloat(numStr.replace(/[kmb]/i, '').replace(/,/g, ''));
-            return Math.round(num * multiplier);
+            
+            let valStr = match[1].replace(/,/g, '').toUpperCase().replace(/\s+/g, '');
+            let multiplier = 1;
+            
+            if (valStr.includes('K') || valStr.includes('พัน')) {
+              multiplier = 1000;
+              valStr = valStr.replace(/[Kพัน]/g, '');
+            } else if (valStr.includes('M') || valStr.includes('ล้าน')) {
+              multiplier = 1000000;
+              valStr = valStr.replace(/[Mล้าน]/g, '');
+            } else if (valStr.includes('B')) {
+              multiplier = 1000000000;
+              valStr = valStr.replace(/[B]/g, '');
+            }
+            
+            const base = parseFloat(valStr);
+            return isNaN(base) ? 0 : Math.round(base * multiplier);
           };
 
-          const likes = parseCount(likeEl?.textContent);
-          const comments = parseCount(commentEl?.textContent);
-          const shares = parseCount(shareEl?.textContent);
+          // 1. Extract Likes/Reactions
+          // Look for the engagement row (usually above the action buttons)
+          const reactionEl = el.querySelector('[aria-label*="reacted" i]') || 
+                            el.querySelector('[aria-label*="ถูกใจ" i]') ||
+                            el.querySelector('[aria-label*="See who reacted" i]');
+          
+          let likes = 0;
+          if (reactionEl) {
+            const label = reactionEl.getAttribute('aria-label') || '';
+            // Handle "Liked by X and 1.2K others"
+            const othersMatch = label.match(/and ([\d,.]+[KMBพันล้าน]*) others/i) || 
+                               label.match(/และคนอื่นๆ อีก ([\d,.]+[KMBพันล้าน]*)/i);
+            if (othersMatch) {
+              likes = parseEngagementCount(othersMatch[1]) + 1;
+            } else {
+              likes = parseEngagementCount(label);
+            }
+          }
+
+          // 2. Extract Comments
+          // Look for comment count next to the button or in the aria-label
+          const commentEl = Array.from(el.querySelectorAll('[aria-label*="Comment" i], [aria-label*="ความคิดเห็น" i]')).pop();
+          let comments = 0;
+          if (commentEl) {
+            const label = commentEl.getAttribute('aria-label') || '';
+            comments = parseEngagementCount(label);
+            // Fallback to text content if label doesn't have the number
+            if (comments === 0) {
+              comments = parseEngagementCount(commentEl.textContent);
+            }
+          }
+
+          // 3. Extract Shares
+          // Look for share count
+          const shareEl = Array.from(el.querySelectorAll('[aria-label*="Share" i], [aria-label*="แชร์" i]')).pop();
+          let shares = 0;
+          if (shareEl) {
+            const label = shareEl.getAttribute('aria-label') || '';
+            shares = parseEngagementCount(label);
+            if (shares === 0) {
+              shares = parseEngagementCount(shareEl.textContent);
+            }
+          }
 
           // Extract post URL
           const linkEl = el.querySelector('a[href*="/posts/"]') ||

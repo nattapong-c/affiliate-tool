@@ -2,19 +2,59 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { KeywordHistoryItem } from '@/lib/api';
-import { formatDate, formatTime, getLanguageFlag, getLanguageLabel } from '@/lib/utils';
-import { Trash2, Clock, FileText } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { KeywordHistoryItem, LanguageCode } from '@/lib/api';
+import { HistoryItem } from '@/components/history-item';
 import { useKeywords } from '@/hooks/use-keywords';
+import { Search, Filter, X, FileText, Loader2 } from 'lucide-react';
+import { useState } from 'react';
 
 interface KeywordHistoryProps {
-  history: KeywordHistoryItem[];
-  isLoading: boolean;
+  onScrape?: (item: KeywordHistoryItem) => void;
 }
 
-export function KeywordHistory({ history, isLoading }: KeywordHistoryProps) {
-  const { deleteHistory } = useKeywords();
+export function KeywordHistory({ onScrape }: KeywordHistoryProps) {
+  const { history, isLoading, deleteHistory } = useKeywords();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [languageFilter, setLanguageFilter] = useState<'all' | 'en' | 'th'>('all');
+  const [scrapingId, setScrapingId] = useState<string | null>(null);
+
+  const handleScrape = async (item: KeywordHistoryItem) => {
+    if (!onScrape) return;
+    
+    setScrapingId(item._id);
+    try {
+      await onScrape(item);
+    } finally {
+      setScrapingId(null);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    await deleteHistory(id);
+  };
+
+  const filteredHistory = history.filter(item => {
+    const matchesSearch = item.productTitle
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase());
+    const matchesLanguage = languageFilter === 'all' || 
+      item.language === languageFilter;
+    
+    return matchesSearch && matchesLanguage;
+  });
+
+  const handleReset = () => {
+    setSearchQuery('');
+    setLanguageFilter('all');
+  };
 
   if (isLoading) {
     return (
@@ -23,7 +63,7 @@ export function KeywordHistory({ history, isLoading }: KeywordHistoryProps) {
           <CardTitle>History</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-center py-8">
+          <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
         </CardContent>
@@ -38,10 +78,10 @@ export function KeywordHistory({ history, isLoading }: KeywordHistoryProps) {
           <CardTitle>History</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 text-muted-foreground">
+          <div className="text-center py-12 text-muted-foreground">
             <FileText className="mx-auto h-12 w-12 mb-4 opacity-50" />
-            <p>No keyword generations yet</p>
-            <p className="text-sm">Generate keywords to see them here</p>
+            <p className="text-lg font-medium">No keyword generations yet</p>
+            <p className="text-sm mt-1">Generate keywords to see them here</p>
           </div>
         </CardContent>
       </Card>
@@ -51,92 +91,77 @@ export function KeywordHistory({ history, isLoading }: KeywordHistoryProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Generation History</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Last {history.length} generations
-        </p>
+        <div className="flex items-center justify-between">
+          <CardTitle>Generation History</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            {filteredHistory.length} of {history.length} items
+          </p>
+        </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
+        {/* Filters */}
+        <div className="flex flex-wrap gap-4 items-end p-4 border rounded-lg bg-muted/50">
+          <div className="flex-1 min-w-[250px] space-y-2">
+            <label className="text-sm font-medium">Search Products</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by product name..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+
+          <div className="w-[200px] space-y-2">
+            <label className="text-sm font-medium">Language</label>
+            <Select value={languageFilter} onValueChange={(v: any) => setLanguageFilter(v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select language" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Languages</SelectItem>
+                <SelectItem value="en">English 🇬🇧</SelectItem>
+                <SelectItem value="th">Thai 🇹🇭</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleReset}
+            title="Reset filters"
+            className="mb-[1px]"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* History Items */}
         <div className="space-y-4">
-          {history.map((item) => (
+          {filteredHistory.map((item) => (
             <HistoryItem
               key={item._id}
               item={item}
-              onDelete={() => deleteHistory(item._id)}
+              onDelete={handleDelete}
+              onScrape={handleScrape}
+              isScraping={scrapingId === item._id}
             />
           ))}
         </div>
+
+        {filteredHistory.length === 0 && (
+          <div className="text-center py-8 text-muted-foreground">
+            <Filter className="mx-auto h-8 w-8 mb-2 opacity-50" />
+            <p>No items match your filters</p>
+            <Button variant="link" onClick={handleReset} className="mt-2">
+              Reset filters
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
-  );
-}
-
-interface HistoryItemProps {
-  item: KeywordHistoryItem;
-  onDelete: () => void;
-}
-
-function HistoryItem({ item, onDelete }: HistoryItemProps) {
-  const intentCount = item.keywords.filter(k => k.category === 'intent').length;
-  const topicCount = item.keywords.filter(k => k.category === 'topic').length;
-
-  return (
-    <div className="border rounded-lg p-4 space-y-3">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex-1">
-          <h4 className="font-semibold">{item.productTitle}</h4>
-          <div className="flex items-center gap-2 mt-1">
-            {item.category && (
-              <Badge variant="secondary">
-                {item.category}
-              </Badge>
-            )}
-            <Badge variant="outline">
-              {getLanguageFlag(item.language)} {getLanguageLabel(item.language)}
-            </Badge>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="text-sm text-muted-foreground flex items-center gap-1">
-            <Clock className="h-3 w-3" />
-            {formatDate(item.createdAt)}
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onDelete}
-            className="text-destructive hover:text-destructive"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-4 text-sm flex-wrap">
-        <div className="flex items-center gap-1">
-          <span className="text-muted-foreground">Keywords:</span>
-          <Badge variant="outline">{item.keywords.length}</Badge>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="text-muted-foreground">Intent:</span>
-          <Badge variant="default">{intentCount}</Badge>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="text-muted-foreground">Topic:</span>
-          <Badge variant="secondary">{topicCount}</Badge>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="text-muted-foreground">Time:</span>
-          <span>{formatTime(item.processingTimeMs)}</span>
-        </div>
-        {item.cacheHit && (
-          <Badge variant="secondary">Cached</Badge>
-        )}
-      </div>
-
-      <div className="text-sm text-muted-foreground line-clamp-2">
-        {item.productDescription}
-      </div>
-    </div>
   );
 }

@@ -5,6 +5,9 @@ import pino from 'pino';
 import { config } from 'dotenv';
 import { KeywordStrategist } from './services/keyword-strategist';
 import { createKeywordRoutes } from './routes/keyword-routes';
+import { createSearchRoutes } from './routes/search-routes';
+import { createPostRoutes } from './routes/post-routes';
+import { createProductScraperRoutes } from './routes/product-scraper-routes';
 import { errorHandler } from './middleware/error-handler';
 import { loggerMiddleware } from './middleware/logger';
 
@@ -49,11 +52,20 @@ const app = new Elysia()
     version: '1.0.0',
     endpoints: {
       health: '/api/health',
-      keywords: '/api/keywords'
+      keywords: '/api/keywords',
+      search: '/api/search',
+      posts: '/api/posts',
+      products: '/api/products'
     }
   }))
   // Keyword routes
   .use(createKeywordRoutes(strategist))
+  // Search routes
+  .use(createSearchRoutes())
+  // Post routes
+  .use(createPostRoutes())
+  // Product scraper routes
+  .use(createProductScraperRoutes())
   .listen(PORT);
 
 logger.info(`🚀 Server running on http://localhost:${PORT}`);

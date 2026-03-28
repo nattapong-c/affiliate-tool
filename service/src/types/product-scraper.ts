@@ -4,7 +4,6 @@ export interface ProductWithKeywords {
   _id: string;
   productTitle: string;
   category?: string;
-  language: LanguageCode;
   keywordCount: number;
   lastGenerated: Date;
   scrapeCount: number;

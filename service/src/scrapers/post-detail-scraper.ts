@@ -368,8 +368,7 @@ export class PostDetailScraper {
    */
   async savePost(
     postDetail: PostDetail,
-    keywords: string[] = [],
-    language: 'en' | 'th' = 'en'
+    keywords: string[] = []
   ): Promise<boolean> {
     try {
       // Calculate engagement density
@@ -407,7 +406,6 @@ export class PostDetailScraper {
           images: postDetail.images,
           videos: postDetail.videos,
           keywords,
-          language,
           status: 'new',
         });
         
@@ -427,8 +425,7 @@ export class PostDetailScraper {
   async scrapeAndSavePosts(
     sessionId: string,
     urls: string[],
-    keywords: string[] = [],
-    language: 'en' | 'th' = 'en'
+    keywords: string[] = []
   ): Promise<{ success: number; failed: number }> {
     let success = 0;
     let failed = 0;
@@ -438,7 +435,7 @@ export class PostDetailScraper {
         const postDetail = await this.scrapePostDetail(sessionId, url);
         
         if (postDetail) {
-          const saved = await this.savePost(postDetail, keywords, language);
+          const saved = await this.savePost(postDetail, keywords);
           if (saved) {
             success++;
           } else {

@@ -69,7 +69,6 @@ export interface ScrapedPost {
   images: string[];
   videos: string[];
   keywords: string[];
-  language: LanguageCode;
   scrapedAt: string;
   status: 'new' | 'processed' | 'engaged' | 'skipped';
 }
@@ -87,7 +86,6 @@ export interface PostFilterParams {
   status?: 'new' | 'processed' | 'engaged' | 'skipped';
   minEngagement?: number;
   minDensity?: number;
-  language?: LanguageCode;
   dateFrom?: string;
   dateTo?: string;
   keywords?: string;
@@ -100,7 +98,6 @@ export interface ProductWithKeywords {
   _id: string;
   productTitle: string;
   category?: string;
-  language: LanguageCode;
   keywordCount: number;
   lastGenerated: string;
   scrapeCount: number;
@@ -160,12 +157,10 @@ export const postApi = {
       const params = new URLSearchParams();
       if (filter.status) params.append('status', filter.status);
       if (filter.minDensity) params.append('minDensity', filter.minDensity.toString());
-      if (filter.language) params.append('language', filter.language);
       if (filter.limit) params.append('limit', filter.limit.toString());
       if (filter.page) params.append('page', filter.page.toString());
 
       const response = await apiClient.get('/api/posts', { params });
-      // Backend returns {success: true, data: {posts, pagination}}
       return response.data.data || { posts: [], pagination: {} };
     } catch (error) {
       handleApiError(error);
@@ -224,10 +219,9 @@ export const postApi = {
 
 // Product Scraper API
 export const productScraperApi = {
-  getProducts: async (filters?: { language?: LanguageCode; search?: string }): Promise<ProductWithKeywords[]> => {
+  getProducts: async (filters?: { search?: string }): Promise<ProductWithKeywords[]> => {
     try {
       const params: any = {};
-      if (filters?.language) params.language = filters.language;
       if (filters?.search) params.search = filters.search;
 
       const response = await apiClient.get('/api/products', { params });

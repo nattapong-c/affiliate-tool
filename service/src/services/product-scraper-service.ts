@@ -26,14 +26,9 @@ export class ProductScraperService {
    * Get all products with keyword counts
    */
   async getProducts(filter?: {
-    language?: 'en' | 'th';
     searchQuery?: string;
   }): Promise<ProductWithKeywords[]> {
     const matchQuery: any = {};
-
-    if (filter?.language) {
-      matchQuery.language = filter.language;
-    }
 
     if (filter?.searchQuery) {
       matchQuery.productTitle = new RegExp(filter.searchQuery, 'i');
@@ -46,29 +41,20 @@ export class ProductScraperService {
         $group: {
           _id: {
             productTitle: '$productTitle',
-            language: '$language',
             category: '$category'
           },
           keywordCount: { $sum: 1 },
           totalKeywords: { $sum: { $size: { $ifNull: ['$keywords', []] } } },
           lastGenerated: { $max: '$createdAt' },
           scrapeCount: { $sum: 0 },
-          category: { $first: '$category' },
-          language: { $first: '$language' }
+          category: { $first: '$category' }
         }
       },
       {
         $project: {
-          _id: { 
-            $concat: [
-              { $ifNull: ['$_id.productTitle', 'unknown'] }, 
-              '-', 
-              { $ifNull: ['$_id.language', ''] }
-            ] 
-          },
+          _id: { $ifNull: ['$_id.productTitle', 'unknown'] },
           productTitle: { $ifNull: ['$_id.productTitle', 'Unknown Product'] },
           category: '$_id.category',
-          language: 1,
           keywordCount: '$totalKeywords',
           lastGenerated: 1,
           scrapeCount: 1
@@ -196,7 +182,6 @@ export class ProductScraperService {
               reactions: { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 },
               engagementDensity: post.relevanceScore,
               keywords: keywordHistory.keywords,
-              language: keywordHistory.language,
               status: 'new' as const,
               scrapedAt: new Date(),
             },
@@ -252,7 +237,6 @@ export class ProductScraperService {
   async triggerScrapeFromKeywords(
     id: string,
     keywords: string[],
-    language: string,
     request: TriggerScrapeRequest,
     sessionId: string = 'default'
   ): Promise<ScrapeResult> {

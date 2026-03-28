@@ -19,7 +19,6 @@ export class PostController {
       status?: 'new' | 'processed' | 'engaged' | 'skipped';
       minEngagement?: number;
       minDensity?: number;
-      language?: 'en' | 'th';
       dateFrom?: string;
       dateTo?: string;
       keywords?: string;
@@ -39,7 +38,6 @@ export class PostController {
     
     if (request.query?.minEngagement) filter.minEngagement = request.query.minEngagement;
     if (request.query?.minDensity) filter.minDensity = request.query.minDensity;
-    if (request.query?.language) filter.language = request.query.language;
     if (request.query?.dateFrom) filter.dateFrom = new Date(request.query.dateFrom);
     if (request.query?.dateTo) filter.dateTo = new Date(request.query.dateTo);
     if (request.query?.keywords) filter.keywords = request.query.keywords.split(',');

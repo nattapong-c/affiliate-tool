@@ -1,6 +1,5 @@
 'use client';
 
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -10,7 +9,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { PostFilterParams } from '@/lib/api';
-import { Filter, X } from 'lucide-react';
+import { X } from 'lucide-react';
 
 interface PostFiltersProps {
   filters: PostFilterParams;
@@ -26,18 +25,10 @@ export function PostFilters({ filters, onFilterChange }: PostFiltersProps) {
     });
   };
 
-  const handleLanguageChange = (value: string) => {
-    onFilterChange({
-      ...filters,
-      language: value === 'all' ? undefined : (value as any),
-      page: 1,
-    });
-  };
-
   const handleMinDensityChange = (value: string) => {
     onFilterChange({
       ...filters,
-      minDensity: value ? parseFloat(value) : undefined,
+      minDensity: value === 'all' ? undefined : parseFloat(value),
       page: 1,
     });
   };
@@ -63,23 +54,6 @@ export function PostFilters({ filters, onFilterChange }: PostFiltersProps) {
             <SelectItem value="processed">Processed</SelectItem>
             <SelectItem value="engaged">Engaged</SelectItem>
             <SelectItem value="skipped">Skipped</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="flex-1 min-w-[200px] space-y-2">
-        <label className="text-sm font-medium">Language</label>
-        <Select
-          value={filters.language || 'all'}
-          onValueChange={handleLanguageChange}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select language" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Languages</SelectItem>
-            <SelectItem value="en">English</SelectItem>
-            <SelectItem value="th">Thai</SelectItem>
           </SelectContent>
         </Select>
       </div>

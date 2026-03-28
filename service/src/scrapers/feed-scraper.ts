@@ -377,7 +377,6 @@ export class FeedScraper {
             images: [],
             videos: [],
             keywords: [],
-            language: 'en',
             status: 'new',
             scrapedAt: post.scrapedAt,
           },

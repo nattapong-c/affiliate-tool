@@ -10,7 +10,6 @@ export function createProductScraperRoutes() {
   return new Elysia({ prefix: '/api/products' })
     // Get all products with keywords (for history display)
     .get('/', ({ query }) => service.getProducts({
-      language: query.language as 'en' | 'th' | undefined,
       searchQuery: query.search,
     }))
     
@@ -57,7 +56,7 @@ export function createProductScraperRoutes() {
     .post(
       '/scrape-from-keywords',
       async ({ body, query }) => {
-        const { productTitle, keywords, language, ...options } = body;
+        const { productTitle, keywords, ...options } = body;
         
         if (!keywords || !Array.isArray(keywords) || keywords.length === 0) {
           throw new Error('Keywords are required');
@@ -68,7 +67,6 @@ export function createProductScraperRoutes() {
         const result = await service.triggerScrapeFromKeywords(
           tempId,
           keywords,
-          language || 'en',
           {
             maxResults: options.maxResults,
             dateRange: options.dateRange,
@@ -85,7 +83,6 @@ export function createProductScraperRoutes() {
         body: t.Object({
           productTitle: t.String(),
           keywords: t.Array(t.String()),
-          language: t.Optional(t.String()),
           maxResults: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
           dateRange: t.Optional(t.Object({
             daysBack: t.Number({ minimum: 1, maximum: 90 }),

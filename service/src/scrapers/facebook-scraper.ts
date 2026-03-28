@@ -159,10 +159,10 @@ export class FacebookScraper {
         images,
         videos: [],
         keywords: [],
-        language: 'en',
         scrapedAt: new Date(),
-        status: 'new',
-      };
+        status: 'new'
+        };
+
 
       // Update stats
       this.stats.totalScraped++;

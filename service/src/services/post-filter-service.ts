@@ -9,7 +9,6 @@ export interface PostFilter {
   status?: 'new' | 'processed' | 'engaged' | 'skipped';
   minEngagement?: number;
   minDensity?: number;
-  language?: 'en' | 'th';
   dateFrom?: Date;
   dateTo?: Date;
   keywords?: string[];
@@ -31,11 +30,6 @@ export class PostFilterService {
       } else {
         query.status = filter.status;
       }
-    }
-
-    // Language filter
-    if (filter.language) {
-      query.language = filter.language;
     }
 
     // Date filter

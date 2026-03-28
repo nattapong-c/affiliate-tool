@@ -27,7 +27,6 @@ export interface ScrapedPostDocument extends Document {
   images: string[];
   videos: string[];
   keywords: string[];
-  language: 'en' | 'th';
   scrapedAt: Date;
   status: 'new' | 'processed' | 'engaged' | 'skipped';
 }
@@ -88,11 +87,6 @@ const ScrapedPostSchema = new Schema<ScrapedPostDocument, ScrapedPostModel>({
   images: [String],
   videos: [String],
   keywords: [String],
-  language: { 
-    type: String, 
-    enum: ['en', 'th'], 
-    default: 'en' 
-  },
   scrapedAt: { 
     type: Date, 
     default: Date.now,
@@ -109,7 +103,6 @@ const ScrapedPostSchema = new Schema<ScrapedPostDocument, ScrapedPostModel>({
 // Indexes for efficient queries
 ScrapedPostSchema.index({ status: 1, scrapedAt: -1 });
 ScrapedPostSchema.index({ engagementDensity: -1 });
-ScrapedPostSchema.index({ language: 1, status: 1 });
 ScrapedPostSchema.index({ keywords: 1 });
 
 // Text search index

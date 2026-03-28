@@ -45,7 +45,6 @@ export interface ScrapedPost {
   images: string[];
   videos: string[];
   keywords: string[];
-  language: 'en' | 'th';
   scrapedAt: Date;
   status: 'new' | 'processed' | 'engaged' | 'skipped';
 }

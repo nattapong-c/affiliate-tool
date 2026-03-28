@@ -41,8 +41,8 @@ export class PostController {
     if (request.query?.dateFrom) filter.dateFrom = new Date(request.query.dateFrom);
     if (request.query?.dateTo) filter.dateTo = new Date(request.query.dateTo);
     if (request.query?.keywords) filter.keywords = request.query.keywords.split(',');
-    if (request.query?.limit) filter.limit = request.query.limit;
-    if (request.query?.page) filter.page = request.query.page;
+    if (request.query?.limit) filter.limit = Number(request.query.limit);
+    if (request.query?.page) filter.page = Number(request.query.page);
 
     logger.info({ filter, query: request.query }, 'Getting posts with filter');
 

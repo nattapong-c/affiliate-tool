@@ -1,5 +1,6 @@
 import pino from 'pino';
 import { ScrapedPostModel as ScrapedPostModelInstance, ScrapedPostModel as ScrapedPostModelType } from '../models/scraped-post';
+import { GeneratedCommentModel } from '../models/generated-comment';
 import { engagementCalculator } from '../utils/engagement-calculator';
 
 const logger = pino();
@@ -59,8 +60,8 @@ export class PostFilterService {
       postsQuery = postsQuery.gte('engagementDensity', filter.minDensity);
     }
 
-    // Sorting
-    postsQuery = postsQuery.sort({ engagementDensity: -1, scrapedAt: -1 });
+    // Sorting - always show latest scraped posts first
+    postsQuery = postsQuery.sort({ scrapedAt: -1 });
 
     // Pagination
     const limit = filter.limit || 50;
@@ -163,6 +164,9 @@ export class PostFilterService {
    * Delete post
    */
   async deletePost(id: string) {
+    // Delete associated generated comments
+    await GeneratedCommentModel.deleteMany({ postId: id });
+
     const result = await ScrapedPostModel.findByIdAndDelete(id);
     
     if (result) {
@@ -196,7 +200,7 @@ export class PostFilterService {
       status: { $in: ['new', 'processed'] },
       engagementDensity: { $gte: 1 }
     })
-      .sort({ engagementDensity: -1 })
+      .sort({ scrapedAt: -1 })
       .limit(limit);
     
     logger.info({ count: posts.length }, 'Posts for engagement retrieved');
@@ -211,7 +215,7 @@ export class PostFilterService {
     const posts = await ScrapedPostModel.find({
       status: { $in: ['new', 'processed'] }
     })
-      .sort({ engagementDensity: -1 })
+      .sort({ scrapedAt: -1 })
       .limit(limit);
     
     // Add analysis to each post

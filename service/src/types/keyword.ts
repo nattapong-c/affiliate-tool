@@ -5,6 +5,7 @@ export type LanguageCode = 'en' | 'th';
 export const KeywordGenerationRequestSchema = z.object({
   productTitle: z.string().min(1).max(200),
   productDescription: z.string().min(1).max(2000),
+  productUrl: z.string().url().optional().or(z.literal('')),
   category: z.string().optional(),
   targetAudience: z.string().optional(),
   language: z.enum(['en', 'th']).optional().default('en'),

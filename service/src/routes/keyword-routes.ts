@@ -19,6 +19,7 @@ export function createKeywordRoutes(strategist: KeywordStrategist) {
         body: t.Object({
           productTitle: t.String({ minLength: 1, maxLength: 200 }),
           productDescription: t.String({ minLength: 1, maxLength: 2000 }),
+          productUrl: t.Optional(t.String()),
           category: t.Optional(t.String()),
           targetAudience: t.Optional(t.String()),
           language: t.Optional(t.Enum({ en: 'en', th: 'th' }))

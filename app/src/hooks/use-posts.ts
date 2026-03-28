@@ -41,7 +41,7 @@ export function usePosts(filter?: PostFilterParams) {
 }
 
 export function usePostStats() {
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['post-stats'],
     queryFn: () => postApi.getStatistics(),
     staleTime: 10 * 60 * 1000, // 10 minutes
@@ -51,6 +51,7 @@ export function usePostStats() {
     stats: data,
     isLoading,
     error,
+    refetch,
   };
 }
 

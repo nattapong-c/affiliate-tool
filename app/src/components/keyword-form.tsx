@@ -17,6 +17,7 @@ interface KeywordFormProps {
 export function KeywordForm({ onSuccess }: KeywordFormProps) {
   const [productTitle, setProductTitle] = useState('');
   const [productDescription, setProductDescription] = useState('');
+  const [productUrl, setProductUrl] = useState('');
   const [category, setCategory] = useState('');
   const [language, setLanguage] = useState<LanguageCode>('en');
   const { generateKeywords, isGenerating } = useKeywords();
@@ -42,6 +43,7 @@ export function KeywordForm({ onSuccess }: KeywordFormProps) {
       await generateKeywords({
         productTitle,
         productDescription,
+        productUrl,
         category: category || undefined,
         language
       });
@@ -49,6 +51,7 @@ export function KeywordForm({ onSuccess }: KeywordFormProps) {
       // Clear form
       setProductTitle('');
       setProductDescription('');
+      setProductUrl('');
       setCategory('');
       
       onSuccess?.();
@@ -98,6 +101,19 @@ export function KeywordForm({ onSuccess }: KeywordFormProps) {
               required
               maxLength={2000}
               rows={5}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="productUrl" className="text-sm font-medium">
+              Product Link (Optional)
+            </label>
+            <Input
+              id="productUrl"
+              type="url"
+              value={productUrl}
+              onChange={(e) => setProductUrl(e.target.value)}
+              placeholder="https://shopee.co.th/product-link"
             />
           </div>
 

@@ -7,6 +7,7 @@ export type LanguageCode = 'en' | 'th';
 export interface KeywordGenerationRequest {
   productTitle: string;
   productDescription: string;
+  productUrl?: string;
   category?: string;
   targetAudience?: string;
   language?: LanguageCode;
@@ -31,6 +32,7 @@ export interface KeywordHistoryItem {
   _id: string;
   productTitle: string;
   productDescription: string;
+  productUrl?: string;
   category?: string;
   language: LanguageCode;
   keywords: Keyword[];
@@ -110,6 +112,26 @@ export interface ScrapeResult {
   searchQueries: number;
   duration: number;
   jobId: string;
+}
+
+// Comment Types
+export interface GeneratedComment {
+  _id: string;
+  postId: string;
+  productId: any; // Populated with KeywordHistoryItem
+  settings: {
+    language: 'en' | 'th';
+    emotion: string;
+    length: 'short' | 'medium' | 'long';
+    customPrompt?: string;
+  };
+  options: Array<{
+    text: string;
+    version: number;
+  }>;
+  selectedOptionIndex?: number;
+  status: 'draft' | 'posted';
+  createdAt: string;
 }
 
 // Keyword API
@@ -274,6 +296,44 @@ export const productScraperApi = {
       const response = await apiClient.post('/api/products/scrape-feed', settings, {
         params: { sessionId: 'web' },
       });
+      return response.data.data;
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+};
+
+// Comment API
+export const commentApi = {
+  generate: async (
+    postId: string, 
+    productId: string, 
+    settings: GeneratedComment['settings']
+  ): Promise<GeneratedComment> => {
+    try {
+      const response = await apiClient.post('/api/comments/generate', {
+        postId,
+        productId,
+        settings,
+      });
+      return response.data.data;
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+
+  getByPost: async (postId: string): Promise<GeneratedComment[]> => {
+    try {
+      const response = await apiClient.get(`/api/comments/post/${postId}`);
+      return response.data.data;
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+
+  selectOption: async (commentId: string, index: number): Promise<GeneratedComment> => {
+    try {
+      const response = await apiClient.patch(`/api/comments/${commentId}/select`, { index });
       return response.data.data;
     } catch (error) {
       handleApiError(error);

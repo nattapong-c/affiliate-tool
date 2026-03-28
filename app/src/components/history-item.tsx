@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { KeywordHistoryItem } from '@/lib/api';
 import { KeywordPreview } from './keyword-preview';
-import { Clock, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Clock, Trash2, ChevronDown, ChevronUp, Link as LinkIcon } from 'lucide-react';
 import { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -38,6 +38,15 @@ export function HistoryItem({ item, onDelete }: HistoryItemProps) {
               <Badge variant="secondary" className="text-xs">
                 📁 {item.category}
               </Badge>
+            )}
+
+            {item.productUrl && (
+              <div className="flex items-center gap-1 text-xs text-primary hover:underline">
+                <LinkIcon className="h-3 w-3" />
+                <a href={item.productUrl} target="_blank" rel="noopener noreferrer" className="truncate max-w-[300px]">
+                  {item.productUrl}
+                </a>
+              </div>
             )}
             
             <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">

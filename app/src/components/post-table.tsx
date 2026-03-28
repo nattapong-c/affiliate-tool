@@ -12,7 +12,9 @@ import {
 } from '@/components/ui/table';
 import { ScrapedPost } from '@/lib/api';
 import { formatDistanceToNow } from 'date-fns';
-import { Heart, MessageCircle, Share2, Trash2, ExternalLink } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Trash2, ExternalLink, Sparkles } from 'lucide-react';
+import { useState } from 'react';
+import { CommentGenerationModal } from './comment-generation-modal';
 
 interface PostTableProps {
   posts: ScrapedPost[];
@@ -22,6 +24,9 @@ interface PostTableProps {
 }
 
 export function PostTable({ posts, isLoading, onUpdateStatus, onDelete }: PostTableProps) {
+  const [selectedPost, setSelectedPost] = useState<ScrapedPost | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -61,7 +66,8 @@ export function PostTable({ posts, isLoading, onUpdateStatus, onDelete }: PostTa
   };
 
   return (
-    <Table>
+    <>
+      <Table>
       <TableHeader>
         <TableRow>
           <TableHead className="w-[40%]">Content</TableHead>
@@ -132,6 +138,18 @@ export function PostTable({ posts, isLoading, onUpdateStatus, onDelete }: PostTa
             </TableCell>
             <TableCell className="text-right">
               <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1 text-primary border-primary hover:bg-primary/5"
+                  onClick={() => {
+                    setSelectedPost(post);
+                    setIsModalOpen(true);
+                  }}
+                >
+                  <Sparkles className="h-3 w-3" />
+                  Craft
+                </Button>
                 {onUpdateStatus && post.status !== 'engaged' && (
                   <Button
                     variant="ghost"
@@ -157,5 +175,12 @@ export function PostTable({ posts, isLoading, onUpdateStatus, onDelete }: PostTa
         ))}
       </TableBody>
     </Table>
+
+      <CommentGenerationModal 
+        post={selectedPost}
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+      />
+    </>
   );
 }

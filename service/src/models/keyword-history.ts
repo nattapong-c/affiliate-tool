@@ -4,6 +4,7 @@ import { Keyword, LanguageCode } from '../types/keyword';
 export interface KeywordHistoryDocument extends Document {
   productTitle: string;
   productDescription: string;
+  productUrl?: string;
   category?: string;
   targetAudience?: string;
   language: LanguageCode;
@@ -17,6 +18,7 @@ export interface KeywordHistoryDocument extends Document {
 const KeywordHistorySchema = new Schema<KeywordHistoryDocument>({
   productTitle: { type: String, required: true },
   productDescription: { type: String, required: true },
+  productUrl: String,
   category: String,
   targetAudience: String,
   language: { 

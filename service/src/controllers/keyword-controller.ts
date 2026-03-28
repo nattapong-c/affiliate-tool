@@ -1,5 +1,6 @@
 import { KeywordStrategist } from '../services/keyword-strategist';
 import { KeywordHistoryModel } from '../models/keyword-history';
+import { GeneratedCommentModel } from '../models/generated-comment';
 import { KeywordGenerationRequest } from '../types/keyword';
 import { AppError } from '../middleware/error-handler';
 import pino from 'pino';
@@ -15,7 +16,7 @@ export class KeywordController {
 
   async generateKeywords(request: { body: KeywordGenerationRequest }) {
     try {
-      const { productTitle, productDescription, category, targetAudience, language } = request.body;
+      const { productTitle, productDescription, productUrl, category, targetAudience, language } = request.body;
       
       logger.info({ productTitle, category, language }, 'Generating keywords');
       
@@ -31,6 +32,7 @@ export class KeywordController {
       await KeywordHistoryModel.create({
         productTitle,
         productDescription,
+        productUrl,
         category,
         targetAudience,
         language: result.language,
@@ -107,6 +109,9 @@ export class KeywordController {
 
   async deleteHistory(id: string) {
     try {
+      // Delete associated generated comments
+      await GeneratedCommentModel.deleteMany({ productId: id });
+
       const result = await KeywordHistoryModel.findByIdAndDelete(id);
       
       if (!result) {
@@ -115,7 +120,7 @@ export class KeywordController {
 
       return {
         success: true,
-        message: 'History deleted successfully'
+        message: 'History and related comments deleted successfully'
       };
     } catch (error) {
       if (error instanceof AppError) throw error;

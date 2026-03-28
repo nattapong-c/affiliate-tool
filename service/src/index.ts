@@ -4,10 +4,12 @@ import mongoose from 'mongoose';
 import pino from 'pino';
 import { config } from 'dotenv';
 import { KeywordStrategist } from './services/keyword-strategist';
+import { EngagementSpecialist } from './services/engagement-specialist';
 import { createKeywordRoutes } from './routes/keyword-routes';
 import { createSearchRoutes } from './routes/search-routes';
 import { createPostRoutes } from './routes/post-routes';
 import { createProductScraperRoutes } from './routes/product-scraper-routes';
+import { createCommentRoutes } from './routes/comment-routes';
 import { errorHandler } from './middleware/error-handler';
 import { loggerMiddleware } from './middleware/logger';
 
@@ -32,6 +34,7 @@ mongoose.connect(MONGODB_URI)
 
 // Initialize services
 const strategist = new KeywordStrategist(OPENAI_API_KEY || '');
+const engagementSpecialist = new EngagementSpecialist(OPENAI_API_KEY || '');
 
 // Create app
 const app = new Elysia()
@@ -55,7 +58,8 @@ const app = new Elysia()
       keywords: '/api/keywords',
       search: '/api/search',
       posts: '/api/posts',
-      products: '/api/products'
+      products: '/api/products',
+      comments: '/api/comments'
     }
   }))
   // Keyword routes
@@ -66,6 +70,8 @@ const app = new Elysia()
   .use(createPostRoutes())
   // Product scraper routes
   .use(createProductScraperRoutes())
+  // Comment routes
+  .use(createCommentRoutes(engagementSpecialist))
   .listen(PORT);
 
 logger.info(`🚀 Server running on http://localhost:${PORT}`);

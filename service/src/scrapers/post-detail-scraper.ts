@@ -142,9 +142,16 @@ export class PostDetailScraper {
   private async extractAuthor(page: any): Promise<{ name: string; profileUrl: string }> {
     try {
       const author = await page.evaluate(() => {
-        const authorElement = document.querySelector(
-          '[data-pagelet="PageHeader"] a, [data-pagelet="PostHeader"] a'
-        );
+        const authorElement = (document.querySelector('h2 span a[role="link"]') ||
+                              document.querySelector('h3 span a[role="link"]') ||
+                              document.querySelector('h2 a[role="link"]') ||
+                              document.querySelector('h3 a[role="link"]') ||
+                              document.querySelector('[data-pagelet="PageHeader"] a') ||
+                              document.querySelector('[data-pagelet="PostHeader"] a') ||
+                              document.querySelector('a[data-hovercard*="user.php"]') ||
+                              document.querySelector('a[data-hovercard*="page.php"]') ||
+                              document.querySelector('strong a') ||
+                              document.querySelector('span[dir="auto"] strong')) as HTMLAnchorElement | null;
         
         if (authorElement) {
           return {
@@ -153,6 +160,18 @@ export class PostDetailScraper {
           };
         }
         
+        // Fallback
+        const links = Array.from(document.querySelectorAll('a[role="link"]'));
+        for (const link of links) {
+          const text = link.textContent?.trim() || '';
+          if (text.length > 2 && text.length < 50 && !/^\d+$/.test(text)) {
+            return {
+              name: text,
+              profileUrl: link.getAttribute('href') || '',
+            };
+          }
+        }
+
         return { name: 'Unknown', profileUrl: '' };
       });
 

@@ -184,14 +184,33 @@ export class FeedScraper {
 
           // Extract author - improved strategy
           let author = 'Unknown';
-          const authorEl = (el.querySelector('[data-pagelet="PostHeader"] h2 a') ||
+          const authorEl = (el.querySelector('h2 span a[role="link"]') ||
+                          el.querySelector('h3 span a[role="link"]') ||
+                          el.querySelector('h2 a[role="link"]') ||
+                          el.querySelector('h3 a[role="link"]') ||
+                          el.querySelector('[data-pagelet="PostHeader"] h2 a') ||
                           el.querySelector('[data-pagelet="PostHeader"] h3 a') ||
-                          el.querySelector('h2 span a[role="link"]') ||
-                          el.querySelector('[data-pagelet="PageHeader"] a') ||
-                          el.querySelector('[data-pagelet="PostHeader"] a') ||
-                          el.querySelector('a[href*="/profile"]') ||
-                          el.querySelector('strong')) as HTMLAnchorElement | null;
-          author = authorEl?.textContent?.trim() || 'Unknown';
+                          el.querySelector('a[data-hovercard*="user.php"]') ||
+                          el.querySelector('a[data-hovercard*="page.php"]') ||
+                          el.querySelector('strong a') ||
+                          el.querySelector('span[dir="auto"] strong')) as HTMLAnchorElement | null;
+          
+          if (authorEl) {
+            author = authorEl.textContent?.trim() || 'Unknown';
+          }
+
+          // Fallback: look for any link that might be the author name if still unknown
+          if (author === 'Unknown' || author === '') {
+            const possibleLinks = Array.from(el.querySelectorAll('a[role="link"]'));
+            for (const link of possibleLinks) {
+              const text = link.textContent?.trim() || '';
+              // Author names usually don't have numbers or special symbols and are short-ish
+              if (text.length > 2 && text.length < 50 && !/^\d+$/.test(text)) {
+                author = text;
+                break;
+              }
+            }
+          }
 
           // Extract timestamp
           const timeEl = (el.querySelector('abbr[data-utime]') ||
